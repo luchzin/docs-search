@@ -1,0 +1,71 @@
+# ==========================================
+# Django & Python Core
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.log
+*.pot
+
+# ==========================================
+# Databases & Local Settings
+# ==========================================
+db.sqlite3
+db.sqlite3-journal
+local_settings.py
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+.env
+.env.*
+!.env.example
+secrets.json
+
+# ==========================================
+# Virtual Environments
+# ==========================================
+env/
+venv/
+.env/
+.venv/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==========================================
+# Static & Media files
+# ==========================================
+# Ignore user-uploaded assets in production
+media/
+
+# Ignore gathered static assets (uncomment if you use collectstatic locally)
+# staticroot/
+# static_cdn/
+
+# ==========================================
+# IDEs and Editors
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# ==========================================
+# Testing and Coverage
+# ==========================================
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
