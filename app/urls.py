@@ -1,7 +1,9 @@
 from django.contrib import admin
-from django.urls import include, path, re_path
+from django.conf.urls.static import static
+from django.urls import include, path
 from rest_framework import routers
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from app import settings
 from app.chat.views import ChatSessionViewSet
 from app.docs.views import DocumentViewSet
 
@@ -17,3 +19,5 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
 ]
+if settings.DEBUG:
+  urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
