@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-dc3@e5$w_)pf+^r^5_ab9vtta4jl1js7db@_g2k_l&3)fsi133'
+SECRET_KEY = 'django-insecure-6ih6(996y7@)33++g=b_vg4)lc1_#jvkq!4s@)c7ojdlf7xwsc'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -37,9 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-     'rest_framework',
-    'djoser',
-      'drf_spectacular',
+        "rest_framework",
+       'app.chat',
+    'app.docs',
+     'djoser',
 ]
 
 MIDDLEWARE = [
@@ -52,17 +53,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-REST_FRAMEWORK = {
-    # YOUR SETTINGS
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-}
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Your Project API',
-    'DESCRIPTION': 'Your project description',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    # OTHER SETTINGS
-}
 ROOT_URLCONF = 'app.urls'
 
 TEMPLATES = [
