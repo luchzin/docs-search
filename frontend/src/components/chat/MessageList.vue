@@ -22,7 +22,10 @@ watch(
 
 <template>
   <ScrollArea class="h-full">
-    <div v-if="!chatStore.messages.length" class="flex h-full min-h-[420px] flex-col items-center justify-center gap-4 px-6 text-center">
+    <div
+      v-if="!chatStore.messages.length"
+      class="flex h-full min-h-[420px] flex-col items-center justify-center gap-4 px-6 text-center"
+    >
       <div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
         <Sparkles class="size-6 text-primary" />
       </div>
@@ -50,7 +53,7 @@ watch(
 
       <div
         v-if="chatStore.isLoading"
-        class="flex gap-3 bg-muted/30 px-4 py-5"
+        class="flex gap-3 bg-muted/30 px-3 sm:px-4 py-4 sm:py-5"
       >
         <Skeleton class="size-8 shrink-0 rounded-full" />
         <div class="flex-1 space-y-2">

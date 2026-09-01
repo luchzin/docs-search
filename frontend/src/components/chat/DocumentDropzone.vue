@@ -50,7 +50,7 @@ function openFilePicker() {
       tabindex="0"
       :class="
         cn(
-          'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center transition-colors',
+          'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-5 sm:py-6 text-center transition-colors',
           isDragging
             ? 'border-primary bg-primary/5'
             : 'border-border hover:border-primary/50 hover:bg-muted/50',
@@ -68,7 +68,7 @@ function openFilePicker() {
         <p class="text-sm font-medium">Drop PDF here</p>
         <p class="text-xs text-muted-foreground">or click to browse</p>
       </div>
-      <Badge variant="secondary" class="text-xs">PDF only</Badge>
+      <Badge variant="secondary" class="text-[11px] sm:text-xs">PDF only</Badge>
     </div>
 
     <input
@@ -88,12 +88,12 @@ function openFilePicker() {
       <li
         v-for="doc in documentsStore.documents"
         :key="doc.id"
-        class="flex items-start gap-2 rounded-md border bg-card p-2"
+        class="flex items-start gap-2 rounded-md border bg-card p-2 sm:p-2.5"
       >
         <FileText class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium">{{ doc.name }}</p>
-          <p class="text-xs text-muted-foreground">
+          <p class="truncate text-xs sm:text-sm font-medium">{{ doc.name }}</p>
+          <p class="text-[11px] sm:text-xs text-muted-foreground">
             {{ documentsStore.formatFileSize(doc.size) }}
           </p>
           <Skeleton
@@ -102,14 +102,14 @@ function openFilePicker() {
           />
           <p
             v-else-if="doc.status === 'error'"
-            class="mt-1 text-xs text-destructive"
+            class="mt-1 text-[11px] sm:text-xs text-destructive"
           >
             {{ doc.errorMessage }}
           </p>
           <Badge
             v-else-if="doc.status === 'ready'"
             variant="secondary"
-            class="mt-1 text-xs"
+            class="mt-1 text-[11px] sm:text-xs"
           >
             Ready
           </Badge>

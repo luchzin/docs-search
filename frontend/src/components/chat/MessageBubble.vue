@@ -13,12 +13,12 @@ defineProps<{
   <div
     :class="
       cn(
-        'flex gap-3 px-4 py-5',
+        'flex gap-2.5 sm:gap-3 px-3 py-4 sm:px-4 sm:py-5',
         message.role === 'assistant' ? 'bg-muted/30' : 'bg-background',
       )
     "
   >
-    <Avatar class="size-8 shrink-0">
+    <Avatar class="size-7 sm:size-8 shrink-0">
       <AvatarFallback
         :class="
           cn(
@@ -28,16 +28,16 @@ defineProps<{
           )
         "
       >
-        <Bot v-if="message.role === 'assistant'" class="size-4" />
-        <User v-else class="size-4" />
+        <Bot v-if="message.role === 'assistant'" class="size-3.5 sm:size-4" />
+        <User v-else class="size-3.5 sm:size-4" />
       </AvatarFallback>
     </Avatar>
 
     <div class="min-w-0 flex-1 space-y-1">
-      <p class="text-sm font-medium">
+      <p class="text-xs sm:text-sm font-medium">
         {{ message.role === "assistant" ? "Assistant" : "You" }}
       </p>
-      <p class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+      <p class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 break-words">
         {{ message.content }}
       </p>
     </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import AppSidebar from "@/components/chat/AppSidebar.vue";
 import ChatInput from "@/components/chat/ChatInput.vue";
 import MessageList from "@/components/chat/MessageList.vue";
@@ -7,9 +7,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { MoonStar, Sun } from "@lucide/vue";
+import { MoonStar, Sun, PanelLeftOpen, PanelLeftClose } from "@lucide/vue";
 
-const sidebarOpen = ref(true);
+const sidebarOpen = ref(typeof window !== "undefined" ? window.innerWidth >= 768 : true);
+
+onMounted(() => {
+  if (window.innerWidth < 768) {
+    sidebarOpen.value = false;
+  }
+});
 
 const isDark = ref(document.documentElement.classList.contains("dark"));
 
@@ -30,13 +36,25 @@ const toggleTheme = (checked: boolean) => {
 
       <main class="flex min-w-0 flex-1 flex-col">
         <header
-          class="flex h-14 shrink-0 items-center justify-between border-b px-4"
+          class="flex h-14 shrink-0 items-center justify-between border-b px-3 sm:px-4"
         >
-          <h2 class="text-sm font-medium text-muted-foreground">
-            RAG Document Chat
-          </h2>
+          <div class="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              class="shrink-0"
+              @click="sidebarOpen = !sidebarOpen"
+            >
+              <PanelLeftClose v-if="sidebarOpen" class="size-4" />
+              <PanelLeftOpen v-else class="size-4" />
+              <span class="sr-only">Toggle sidebar</span>
+            </Button>
+            <h2 class="text-sm font-semibold text-foreground truncate">
+              RAG Document Chat
+            </h2>
+          </div>
 
-          <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2 sm:space-x-4">
             <!-- Theme Toggle -->
             <div class="flex items-center space-x-2">
               <Sun class="h-4 w-4 text-muted-foreground" />
@@ -80,7 +98,7 @@ const toggleTheme = (checked: boolean) => {
           <MessageList />
         </div>
 
-        <ChatInput></ChatInput>
+        <ChatInput />
       </main>
     </div>
   </TooltipProvider>
