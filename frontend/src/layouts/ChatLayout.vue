@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useDark, useToggle } from "@vueuse/core";
 import AppSidebar from "@/components/chat/AppSidebar.vue";
 import ChatInput from "@/components/chat/ChatInput.vue";
 import MessageList from "@/components/chat/MessageList.vue";
@@ -10,25 +11,19 @@ import { Button } from "@/components/ui/button";
 import { MoonStar, Sun, PanelLeftOpen, PanelLeftClose } from "@lucide/vue";
 import AuthModal from "@/components/auth/AuthModal.vue";
 import { useAuthStore } from "../stores/auth";
+
 const authStore = useAuthStore();
 const sidebarOpen = ref(
   typeof window !== "undefined" ? window.innerWidth >= 768 : true,
 );
 const isAuthModalOpen = ref(!authStore.isAuthenticated);
+const isDark = useDark();
+const toggleDark = useToggle(isDark);
 onMounted(() => {
   if (window.innerWidth < 768) {
     sidebarOpen.value = false;
   }
 });
-const isDark = ref(document.documentElement.classList.contains("dark"));
-const toggleTheme = (checked: boolean) => {
-  isDark.value = checked;
-  if (checked) {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
-};
 </script>
 
 <template>
@@ -58,19 +53,13 @@ const toggleTheme = (checked: boolean) => {
 
           <div class="flex items-center space-x-2 sm:space-x-4">
             <AuthModal v-model:open="isAuthModalOpen" />
+
             <!-- Theme Toggle -->
-            <div class="flex items-center space-x-2">
-              <Sun class="h-4 w-4 text-muted-foreground" />
-              <Switch
-                id="dark-mode"
-                :model-value="isDark"
-                @update:model-value="toggleTheme"
-              />
-              <MoonStar class="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="dark-mode" class="sr-only"
-                >Toggle dark mode</Label
-              >
-            </div>
+            <Button variant="ghost" size="icon" @click="isDark = !isDark">
+              <Sun v-if="isDark" class="h-4 w-4" />
+              <MoonStar v-else class="h-4 w-4" />
+              <span class="sr-only">Toggle dark mode</span>
+            </Button>
 
             <!-- GitHub Link with Custom SVG -->
             <Button variant="ghost" size="icon" as-child>
