@@ -1,5 +1,32 @@
-# Vue 3 + TypeScript + Vite
+# Docs Search Frontend
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Vue 3 + TypeScript + Vite frontend application for the **Docs Search & RAG Chat** system.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## 🧰 Tech Stack
+- **Framework**: Vue 3 (`<script setup>` Composition API)
+- **Language**: TypeScript
+- **Build Tool**: Vite 8
+- **State Management**: Pinia (`auth`, `chat`, `documents`)
+- **Styling**: Tailwind CSS v4, Reka UI, Lucide Icons
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Type-check and build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## 🔌 API Integration
+
+The frontend connects to the Django REST API (`http://localhost:8000/api/v1/`).
+
+For full project documentation, architecture, API endpoint specs, and backend setup instructions, refer to the main [Root README](../README.md).
