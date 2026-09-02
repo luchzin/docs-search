@@ -8,17 +8,19 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MoonStar, Sun, PanelLeftOpen, PanelLeftClose } from "@lucide/vue";
-
-const sidebarOpen = ref(typeof window !== "undefined" ? window.innerWidth >= 768 : true);
-
+import AuthModal from "@/components/auth/AuthModal.vue";
+import { useAuthStore } from "../stores/auth";
+const authStore = useAuthStore();
+const sidebarOpen = ref(
+  typeof window !== "undefined" ? window.innerWidth >= 768 : true,
+);
+const isAuthModalOpen = ref(!authStore.isAuthenticated);
 onMounted(() => {
   if (window.innerWidth < 768) {
     sidebarOpen.value = false;
   }
 });
-
 const isDark = ref(document.documentElement.classList.contains("dark"));
-
 const toggleTheme = (checked: boolean) => {
   isDark.value = checked;
   if (checked) {
@@ -55,6 +57,7 @@ const toggleTheme = (checked: boolean) => {
           </div>
 
           <div class="flex items-center space-x-2 sm:space-x-4">
+            <AuthModal v-model:open="isAuthModalOpen" />
             <!-- Theme Toggle -->
             <div class="flex items-center space-x-2">
               <Sun class="h-4 w-4 text-muted-foreground" />

@@ -13,6 +13,7 @@ export const useChatStore = defineStore("chat", () => {
     if (!trimmed || isLoading.value) return
 
     const documentsStore = useDocumentsStore()
+    
     if (!documentsStore.hasDocuments) {
       error.value = "Please upload at least one PDF document first"
       return
