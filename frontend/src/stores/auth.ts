@@ -1,120 +1,118 @@
-import { defineStore } from "pinia"
-import { ref, computed } from "vue"
-import type { User } from "@/types"
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import type { User } from "@/types";
+import { api } from "../lib/utils";
 
 export const useAuthStore = defineStore("auth", () => {
-  const user = ref<User | null>(null)
-  const token = ref<string | null>(localStorage.getItem("auth_token"))
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  const user = ref<User | null>(null);
+  const token = ref<string | null>(localStorage.getItem("access_token"));
+  const refreshToken = ref<string | null>(
+    localStorage.getItem("refresh_token"),
+  );
+  const isLoading = ref(false);
+  const error = ref<string | null>(null);
+  const isAuthenticated = computed(() => !!token.value && !!user.value);
   async function login(credentials: { email: string; password: string }) {
-    isLoading.value = true
-    error.value = null
+    isLoading.value = true;
+    error.value = null;
 
     try {
-      // TODO: Replace with your actual authentication API call
-      // Example:
-      // const response = await api.post("/auth/login", credentials)
-      // const { user: userData, token: authToken } = response.data
-
-      // Mock delay & successful auth payload:
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      
-      const mockUser: User = {
-        id: "usr_" + crypto.randomUUID(),
+      // Djoser JWT login endpoint
+      const response = await api.post("/auth/jwt/create/", {
         email: credentials.email,
-        username: credentials.email.split("@")[0],
-      }
-      const mockToken = "mock_jwt_token_" + Date.now()
+        username: credentials.email,
+        password: credentials.password,
+      });
 
-      // Set state & persist token
-      user.value = mockUser
-      token.value = mockToken
-      localStorage.setItem("auth_token", mockToken)
+      const { access, refresh } = response.data;
+      token.value = access;
+      refreshToken.value = refresh;
+      localStorage.setItem("access_token", access);
+      localStorage.setItem("refresh_token", refresh);
 
-      return mockUser
+      await fetchCurrentUser();
+
+      return user.value;
     } catch (err: any) {
-      error.value = err.response?.data?.message || err.message || "Failed to log in. Please try again."
-      throw err
+      const apiErrors = err.response?.data;
+      if (apiErrors && typeof apiErrors === "object") {
+        error.value =
+          apiErrors.detail ||
+          apiErrors.non_field_errors?.[0] ||
+          Object.values(apiErrors).flat().join(" ");
+      } else {
+        error.value = "Failed to log in. Please check your credentials.";
+      }
+      throw err;
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
   }
 
-  /**
-   * Register a new user.
-   * Replace the body inside try {} with your backend API request.
-   */
-  async function register(payload: { email: string; password: string; name?: string }) {
-    isLoading.value = true
-    error.value = null
+  async function register(payload: {
+    email: string;
+    password: string;
+    username?: string;
+  }) {
+    isLoading.value = true;
+    error.value = null;
 
     try {
-      // TODO: Replace with your backend registration API call
-      // Example:
-      // const response = await api.post("/auth/register", payload)
-      // const { user: userData, token: authToken } = response.data
-
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      const mockUser: User = {
-        id: "usr_" + crypto.randomUUID(),
+      const rawUsername = payload.username || payload.email.split("@")[0];
+      const username = rawUsername.trim().replace(/\s+/g, "_");
+      const response = await api.post("/auth/users/", {
         email: payload.email,
-        username: payload.name || payload.email.split("@")[0],
-      }
-      const mockToken = "mock_jwt_token_" + Date.now()
+        username,
+        password: payload.password,
+        re_password: payload.password,
+      });
 
-      user.value = mockUser
-      token.value = mockToken
-      localStorage.setItem("auth_token", mockToken)
+      await login({ email: payload.email, password: payload.password });
 
-      return mockUser
+      return response.data;
     } catch (err: any) {
-      error.value = err.response?.data?.message || err.message || "Registration failed. Please try again."
-      throw err
+      const apiErrors = err.response?.data;
+      error.value =
+        typeof apiErrors === "object"
+          ? Object.values(apiErrors).flat().join(" ")
+          : "Registration failed. Please try again.";
+      throw err;
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
   }
 
-  /**
-   * Fetch current authenticated user (e.g. on initial app load / page refresh).
-   */
   async function fetchCurrentUser() {
-    if (!token.value) return null
+    if (!token.value) return null;
 
-    isLoading.value = true
-    error.value = null
+    isLoading.value = true;
+    error.value = null;
 
     try {
-      // TODO: Replace with endpoint that gets current user from stored token
-      // Example:
-      // const response = await api.get("/auth/me")
-      // user.value = response.data
-      
-      return user.value
+      const response = await api.get<User>("/auth/users/me/");
+      user.value = response.data;
+      console.log(response.data);
+      return user.value;
     } catch (err: any) {
-      // Clear token if invalid/expired
-      logout()
+      logout();
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
   }
 
-  /**
-   * Log out current user and clear stored state/tokens.
-   */
   function logout() {
-    user.value = null
-    token.value = null
-    error.value = null
-    localStorage.removeItem("auth_token")
+    user.value = null;
+    token.value = null;
+    refreshToken.value = null;
+    error.value = null;
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
   }
 
   return {
     user,
     token,
+    refreshToken,
     isLoading,
     error,
     isAuthenticated,
@@ -122,5 +120,5 @@ export const useAuthStore = defineStore("auth", () => {
     register,
     fetchCurrentUser,
     logout,
-  }
-})
+  };
+});

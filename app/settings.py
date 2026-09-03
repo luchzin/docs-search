@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    "corsheaders",
     'django.contrib.staticfiles',
         "rest_framework",
        'app.chat',
@@ -45,8 +46,12 @@ INSTALLED_APPS = [
      'djoser',
      "drf_spectacular",
 ]
-
+AUTHENTICATION_BACKENDS = [
+    'djoser.auth_backends.LoginFieldBackend',
+    'django.contrib.auth.backends.ModelBackend',  # keep as fallback
+]
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -56,9 +61,28 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 REST_FRAMEWORK = {
-    # ...
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'SERIALIZERS': {
+        'user_create': 'app.serializers.UserCreateSerializer',
+        'user': 'app.serializers.UserSerializer',
+        'current_user': 'app.serializers.UserSerializer',
+        'token_create': 'app.serializers.CustomTokenCreateSerializer',
+    },
+}
+
+SIMPLE_JWT = {
+    'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
+}
+ 
 ROOT_URLCONF = 'app.urls'
 
 TEMPLATES = [

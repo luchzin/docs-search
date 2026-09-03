@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, watch } from "vue"
 import { Loader2, Lock, Mail, User as UserIcon } from "lucide-vue-next"
 import { useAuthStore } from "@/stores/auth"
 
@@ -32,7 +32,12 @@ const registerForm = ref({
   password: "",
 })
 
+watch(isOpen, () => {
+  authStore.error = null
+})
+
 async function handleLogin() {
+  authStore.error = null
   try {
     await authStore.login(loginForm.value)
     isOpen.value = false // Close modal on success
@@ -42,6 +47,7 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+  authStore.error = null
   try {
     await authStore.register(registerForm.value)
     isOpen.value = false // Close modal on success
@@ -53,7 +59,7 @@ async function handleRegister() {
 
 <template>
   <Dialog v-model:open="isOpen">
-    <DialogContent class="sm:max-w-[425px]">
+    <DialogContent class="sm:max-w-106.25">
       <DialogHeader>
         <DialogTitle class="text-xl">Authentication Optional</DialogTitle>
         <DialogDescription>

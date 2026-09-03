@@ -10,4 +10,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      // Any request starting with /api will be proxied to your Django backend
+      "/api": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });

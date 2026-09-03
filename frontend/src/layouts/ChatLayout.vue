@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useDark, useToggle } from "@vueuse/core";
+import { useDark } from "@vueuse/core";
 import AppSidebar from "@/components/chat/AppSidebar.vue";
 import ChatInput from "@/components/chat/ChatInput.vue";
 import MessageList from "@/components/chat/MessageList.vue";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { MoonStar, Sun, PanelLeftOpen, PanelLeftClose } from "@lucide/vue";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MoonStar, Sun, PanelLeftOpen, PanelLeftClose, LogOut, LogIn } from "@lucide/vue";
 import AuthModal from "@/components/auth/AuthModal.vue";
 import { useAuthStore } from "../stores/auth";
 
@@ -16,12 +15,18 @@ const authStore = useAuthStore();
 const sidebarOpen = ref(
   typeof window !== "undefined" ? window.innerWidth >= 768 : true,
 );
-const isAuthModalOpen = ref(!authStore.isAuthenticated);
+const isAuthModalOpen = ref(false);
 const isDark = useDark();
-const toggleDark = useToggle(isDark);
-onMounted(() => {
+
+onMounted(async () => {
   if (window.innerWidth < 768) {
     sidebarOpen.value = false;
+  }
+  if (authStore.token && !authStore.user) {
+    await authStore.fetchCurrentUser();
+  }
+  if (!authStore.isAuthenticated) {
+    isAuthModalOpen.value = true;
   }
 });
 </script>
@@ -53,6 +58,41 @@ onMounted(() => {
 
           <div class="flex items-center space-x-2 sm:space-x-4">
             <AuthModal v-model:open="isAuthModalOpen" />
+
+            <!-- User Auth Status Display -->
+            <template v-if="authStore.isAuthenticated && authStore.user">
+              <div class="flex items-center gap-2">
+                <Avatar class="h-7 w-7">
+                  <AvatarFallback class="text-xs uppercase bg-primary/10 text-primary font-medium">
+                    {{ (authStore.user.username || authStore.user.email || "U").slice(0, 2) }}
+                  </AvatarFallback>
+                </Avatar>
+                <span class="text-xs font-medium text-muted-foreground hidden md:inline truncate max-w-[120px]">
+                  {{ authStore.user.username || authStore.user.email }}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+                  @click="authStore.logout()"
+                  title="Sign Out"
+                >
+                  <LogOut class="h-3.5 w-3.5" />
+                  <span class="hidden sm:inline">Logout</span>
+                </Button>
+              </div>
+            </template>
+            <template v-else>
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-8 text-xs gap-1.5"
+                @click="isAuthModalOpen = true"
+              >
+                <LogIn class="h-3.5 w-3.5" />
+                Sign In
+              </Button>
+            </template>
 
             <!-- Theme Toggle -->
             <Button variant="ghost" size="icon" @click="isDark = !isDark">
