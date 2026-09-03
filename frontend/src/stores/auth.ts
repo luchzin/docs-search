@@ -91,7 +91,6 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const response = await api.get<User>("/auth/users/me/");
       user.value = response.data;
-      console.log(response.data);
       return user.value;
     } catch (err: any) {
       logout();
