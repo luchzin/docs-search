@@ -24,7 +24,7 @@ watch(
   <ScrollArea class="h-full">
     <div
       v-if="!chatStore.messages.length"
-      class="flex h-full min-h-[420px] flex-col items-center justify-center gap-4 px-6 text-center"
+      class="flex h-full min-h-105 flex-col items-center justify-center gap-4 px-6 text-center"
     >
       <div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
         <Sparkles class="size-6 text-primary" />

@@ -37,7 +37,7 @@ defineProps<{
       <p class="text-xs sm:text-sm font-medium">
         {{ message.role === "assistant" ? "Assistant" : "You" }}
       </p>
-      <p class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 break-words">
+      <p class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 wrap-break-word">
         {{ message.content }}
       </p>
     </div>

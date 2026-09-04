@@ -10,8 +10,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MoonStar, Sun, PanelLeftOpen, PanelLeftClose, LogOut, LogIn } from "@lucide/vue";
 import AuthModal from "@/components/auth/AuthModal.vue";
 import { useAuthStore } from "../stores/auth";
+import { useChatStore } from "../stores/chat";
 
 const authStore = useAuthStore();
+const chatStore = useChatStore();
 const sidebarOpen = ref(
   typeof window !== "undefined" ? window.innerWidth >= 768 : true,
 );
@@ -40,7 +42,7 @@ onMounted(async () => {
         <header
           class="flex h-14 shrink-0 items-center justify-between border-b px-3 sm:px-4"
         >
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 min-w-0">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -51,8 +53,8 @@ onMounted(async () => {
               <PanelLeftOpen v-else class="size-4" />
               <span class="sr-only">Toggle sidebar</span>
             </Button>
-            <h2 class="text-sm font-semibold text-foreground truncate">
-              RAG Document Chat
+            <h2 class="text-sm font-semibold text-foreground truncate max-w-[180px] sm:max-w-xs md:max-w-sm">
+              {{ chatStore.activeChat?.title || "RAG Document Chat" }}
             </h2>
           </div>
 

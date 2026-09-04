@@ -4,7 +4,15 @@ export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
-  createdAt: Date;
+  createdAt: string;
+}
+
+export interface Chat {
+  id: string;
+  title: string;
+  updated_at: string;
+  created_at: string;
+  messages: ChatMessage[];
 }
 export interface User {
   id: string;
