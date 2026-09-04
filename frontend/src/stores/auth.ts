@@ -12,12 +12,12 @@ export const useAuthStore = defineStore("auth", () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const isAuthenticated = computed(() => !!token.value && !!user.value);
+
   async function login(credentials: { email: string; password: string }) {
     isLoading.value = true;
     error.value = null;
 
     try {
-      // Djoser JWT login endpoint
       const response = await api.post("/auth/jwt/create/", {
         email: credentials.email,
         username: credentials.email,
@@ -60,7 +60,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const rawUsername = payload.username || payload.email.split("@")[0];
       const username = rawUsername.trim().replace(/\s+/g, "_");
-      const response = await api.post("/auth/users/", {
+      await api.post("/auth/users/", {
         email: payload.email,
         username,
         password: payload.password,
@@ -69,7 +69,7 @@ export const useAuthStore = defineStore("auth", () => {
 
       await login({ email: payload.email, password: payload.password });
 
-      return response.data;
+      return user.value;
     } catch (err: any) {
       const apiErrors = err.response?.data;
       error.value =
@@ -83,7 +83,10 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function fetchCurrentUser() {
-    if (!token.value) return null;
+    token.value = localStorage.getItem("access_token");
+    refreshToken.value = localStorage.getItem("refresh_token");
+
+    if (!token.value && !refreshToken.value) return null;
 
     isLoading.value = true;
     error.value = null;
@@ -91,6 +94,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const response = await api.get<User>("/auth/users/me/");
       user.value = response.data;
+      token.value = localStorage.getItem("access_token");
       return user.value;
     } catch (err: any) {
       logout();

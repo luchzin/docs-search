@@ -27,6 +27,7 @@ onMounted(async () => {
   if (authStore.token && !authStore.user) {
     await authStore.fetchCurrentUser();
   }
+  await chatStore.fetchChats();
   if (!authStore.isAuthenticated) {
     isAuthModalOpen.value = true;
   }

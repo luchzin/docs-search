@@ -7,8 +7,20 @@ from .serializers import ChatSessionSerializer, MessageSerializer
 
 
 class ChatSessionViewSet(viewsets.ModelViewSet):
-  queryset = ChatSession.objects.all().order_by("-updated_at")
   serializer_class = ChatSessionSerializer
+
+  def get_queryset(self):
+    user = self.request.user
+    if user.is_authenticated:
+      return ChatSession.objects.filter(user=user).order_by("-updated_at")
+    return ChatSession.objects.filter(user__isnull=True).order_by("-updated_at")
+
+  def perform_create(self, serializer):
+    user = self.request.user
+    if user.is_authenticated:
+      serializer.save(user=user)
+    else:
+      serializer.save()
 
   @action(detail=True, methods=["post"], url_path="send-message")
   def send_message(self, request, pk=None):

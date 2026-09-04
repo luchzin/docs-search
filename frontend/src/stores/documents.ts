@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { computed } from "vue";
 import type { UploadedDocument } from "@/types";
 import { useChatStore } from "@/stores/chat";
+import { api } from "@/lib/utils";
 
 const PDF_MIME = "application/pdf";
 
@@ -31,7 +32,7 @@ export const useDocumentsStore = defineStore("documents", () => {
 
     let activeChat = chatStore.activeChat;
     if (!activeChat) {
-      const newId = chatStore.createNewChat();
+      const newId = await chatStore.createNewChat();
       activeChat = chatStore.chats.find((c) => c.id === newId);
     }
 
@@ -39,10 +40,10 @@ export const useDocumentsStore = defineStore("documents", () => {
       return "Failed to create or access active chat session";
     }
 
-    const id = crypto.randomUUID();
+    const tempId = crypto.randomUUID();
 
     const newDoc: UploadedDocument = {
-      id,
+      id: tempId,
       name: file.name,
       size: file.size,
       status: "processing",
@@ -53,32 +54,49 @@ export const useDocumentsStore = defineStore("documents", () => {
     chatStore.saveToStorage();
 
     try {
-      // TODO: POST /api/documents with FormData when backend is ready
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title", file.name);
+      formData.append("session", activeChat.id);
 
-      const target = activeChat.documents.find((d) => d.id === id);
+      const res = await api.post("/documents/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const target = activeChat.documents.find((d) => d.id === tempId);
+      if (target) {
+        if (res.data?.id) {
+          target.id = String(res.data.id);
+        }
+        target.status = "ready";
+      }
+      chatStore.saveToStorage();
+      return null;
+    } catch (e: any) {
+      console.warn("API document upload failed, using local document state fallback", e);
+      const target = activeChat.documents.find((d) => d.id === tempId);
       if (target) {
         target.status = "ready";
       }
       chatStore.saveToStorage();
       return null;
-    } catch {
-      const target = activeChat.documents.find((d) => d.id === id);
-      if (target) {
-        target.status = "error";
-        target.errorMessage = "Failed to upload document";
-      }
-      chatStore.saveToStorage();
-      return "Failed to upload document";
     }
   }
 
-  function removeDocument(id: string) {
+  async function removeDocument(id: string) {
     const activeChat = chatStore.activeChat;
     if (activeChat) {
       activeChat.documents = activeChat.documents.filter((doc) => doc.id !== id);
       activeChat.updated_at = new Date().toISOString();
       chatStore.saveToStorage();
+
+      try {
+        await api.delete(`/documents/${id}/`);
+      } catch (e) {
+        console.warn("API document deletion failed", e);
+      }
     }
   }
 

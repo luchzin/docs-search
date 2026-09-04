@@ -5,6 +5,9 @@ from pgvector.django import VectorField
 
 class Document(models.Model):
   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+  session = models.ForeignKey(
+      "chat.ChatSession", on_delete=models.CASCADE, related_name="documents", null=True, blank=True
+  )
   title = models.CharField(max_length=255)
   file = models.FileField(upload_to="uploads/")
   uploaded_at = models.DateTimeField(auto_now_add=True)
