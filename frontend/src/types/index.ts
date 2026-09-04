@@ -13,6 +13,7 @@ export interface Chat {
   updated_at: string;
   created_at: string;
   messages: ChatMessage[];
+  documents: UploadedDocument[];
 }
 export interface User {
   id: string;

@@ -1,18 +1,23 @@
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import type { UploadedDocument } from "@/types";
+import { useChatStore } from "@/stores/chat";
 
 const PDF_MIME = "application/pdf";
 
 export const useDocumentsStore = defineStore("documents", () => {
-  const documents = ref<UploadedDocument[]>([]);
+  const chatStore = useChatStore();
+
+  const documents = computed<UploadedDocument[]>(() => {
+    return chatStore.activeChat?.documents || [];
+  });
 
   const hasDocuments = computed(() =>
-    documents.value.some((doc) => doc.status === "ready"),
+    documents.value.some((doc) => doc.status === "ready")
   );
 
   const readyDocuments = computed(() =>
-    documents.value.filter((doc) => doc.status === "ready"),
+    documents.value.filter((doc) => doc.status === "ready")
   );
 
   function isPdf(file: File): boolean {
@@ -24,38 +29,57 @@ export const useDocumentsStore = defineStore("documents", () => {
       return "Only PDF files are supported";
     }
 
+    let activeChat = chatStore.activeChat;
+    if (!activeChat) {
+      const newId = chatStore.createNewChat();
+      activeChat = chatStore.chats.find((c) => c.id === newId);
+    }
+
+    if (!activeChat) {
+      return "Failed to create or access active chat session";
+    }
+
     const id = crypto.randomUUID();
 
-    // 1. Initialize directly as "processing"
-    documents.value.push({
+    const newDoc: UploadedDocument = {
       id,
       name: file.name,
       size: file.size,
       status: "processing",
-    });
+    };
+
+    activeChat.documents.push(newDoc);
+    activeChat.updated_at = new Date().toISOString();
+    chatStore.saveToStorage();
 
     try {
       // TODO: POST /api/documents with FormData when backend is ready
       await new Promise((resolve) => setTimeout(resolve, 800));
 
-      // 2. Find and update the document within documents.value (the reactive proxy array)
-      const target = documents.value.find((d) => d.id === id);
+      const target = activeChat.documents.find((d) => d.id === id);
       if (target) {
         target.status = "ready";
       }
+      chatStore.saveToStorage();
       return null;
     } catch {
-      const target = documents.value.find((d) => d.id === id);
+      const target = activeChat.documents.find((d) => d.id === id);
       if (target) {
         target.status = "error";
         target.errorMessage = "Failed to upload document";
       }
+      chatStore.saveToStorage();
       return "Failed to upload document";
     }
   }
 
   function removeDocument(id: string) {
-    documents.value = documents.value.filter((doc) => doc.id !== id);
+    const activeChat = chatStore.activeChat;
+    if (activeChat) {
+      activeChat.documents = activeChat.documents.filter((doc) => doc.id !== id);
+      activeChat.updated_at = new Date().toISOString();
+      chatStore.saveToStorage();
+    }
   }
 
   function formatFileSize(bytes: number): string {

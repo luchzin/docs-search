@@ -39,7 +39,12 @@ export const useChatStore = defineStore("chat", () => {
       const storedChats = localStorage.getItem(STORAGE_CHATS_KEY);
       const storedActiveId = localStorage.getItem(STORAGE_ACTIVE_KEY);
       if (storedChats) {
-        chats.value = JSON.parse(storedChats);
+        const parsed: Chat[] = JSON.parse(storedChats);
+        chats.value = parsed.map((c) => ({
+          ...c,
+          messages: c.messages || [],
+          documents: c.documents || [],
+        }));
       }
       if (storedActiveId && chats.value.some((c) => c.id === storedActiveId)) {
         activeChatId.value = storedActiveId;
@@ -60,6 +65,7 @@ export const useChatStore = defineStore("chat", () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       messages: [],
+      documents: [],
     };
     chats.value.unshift(newChat);
     activeChatId.value = newChat.id;
@@ -110,7 +116,7 @@ export const useChatStore = defineStore("chat", () => {
     const documentsStore = useDocumentsStore();
 
     if (!documentsStore.hasDocuments) {
-      error.value = "Please upload at least one PDF document first";
+      error.value = "Please upload at least one PDF document to this chat first";
       return;
     }
 
@@ -181,5 +187,6 @@ export const useChatStore = defineStore("chat", () => {
     deleteChat,
     sendMessage,
     clearMessages,
+    saveToStorage,
   };
 });
