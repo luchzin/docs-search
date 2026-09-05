@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#0d0e10" />
+
+  <!-- Outer Dark Circle Fill -->
+  <circle cx="512" cy="512" r="480" fill="#202226" />
+
+  <!-- Gradient Definition -->
+  <defs>
+    <linearGradient id="purpleYellowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7e14ff" />
+      <stop offset="45%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#facc15" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(512, 512) scale(2.2)">
+    <!-- Main Sparkle / Four-Point Star -->
+    <path d="M 0,-105 C 18,-32 32,-18 105,0 C 32,18 18,32 0,105 C -18,32 -32,18 -105,0 C -32,-18 -18,-32 0,-105 Z" 
+          fill="none" 
+          stroke="url(#purpleYellowGradient)" 
+          stroke-width="26" 
+          stroke-linejoin="round" 
+          stroke-linecap="round" />
+
+    <!-- Plus Symbol (Top Right) -->
+    <path d="M 72,-72 L 72,-40 M 56,-56 L 88,-56" 
+          fill="none" 
+          stroke="#facc15" 
+          stroke-width="18" 
+          stroke-linecap="round" />
+
+    <!-- Circle / Ring (Bottom Left) -->
+    <circle cx="-62" cy="62" r="20" 
+            fill="none" 
+            stroke="#facc15" 
+            stroke-width="15" />
+  </g>
+</svg>

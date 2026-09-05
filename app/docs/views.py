@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from .models import Document, DocumentChunk
 from .serializers import DocumentChunkSerializer, DocumentSerializer
+from .services import process_and_store_document
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
@@ -24,7 +25,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
     file_obj = serializer.validated_data.get("file")
     if not title and file_obj:
       title = file_obj.name
-    serializer.save(title=title or "Untitled Document")
+
+    session_val = self.request.data.get("session")
+    session_obj = serializer.validated_data.get("session")
+
+    if not session_obj and session_val:
+      from app.chat.models import ChatSession
+      try:
+        session_obj, _ = ChatSession.objects.get_or_create(id=session_val)
+      except Exception:
+        session_obj = None
+
+    kwargs = {"title": title or "Untitled Document"}
+    if session_obj:
+      kwargs["session"] = session_obj
+
+    instance = serializer.save(**kwargs)
+    process_and_store_document(instance)
 
   @action(detail=False, methods=["post"], url_path="search")
   def vector_search(self, request):

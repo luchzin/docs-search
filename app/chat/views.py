@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from .models import ChatSession, Message
 from .serializers import ChatSessionSerializer, MessageSerializer
+from app.docs.services import generate_rag_response
 
 
 class ChatSessionViewSet(viewsets.ModelViewSet):
@@ -25,7 +26,12 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
   @action(detail=True, methods=["post"], url_path="send-message")
   def send_message(self, request, pk=None):
     """Custom endpoint to send a user message and trigger RAG pipeline."""
-    session = self.get_object()
+    try:
+      session = self.get_object()
+    except Exception:
+      user = request.user if request.user.is_authenticated else None
+      session, _ = ChatSession.objects.get_or_create(id=pk, defaults={"user": user})
+
     user_content = request.data.get("content")
 
     if not user_content:
@@ -39,10 +45,8 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
         session=session, role="user", content=user_content
     )
 
-    # 2. TODO: Call your RAG service here (search pgvector chunks -> call LLM)
-    assistant_reply_text = (
-        f"Echo response to: '{user_content}'. Replace with LLM logic."
-    )
+    # 2. Call RAG pipeline (vector search in pgvector -> generate LLM/context response)
+    assistant_reply_text = generate_rag_response(session, user_content)
 
     # 3. Save assistant message
     assistant_msg = Message.objects.create(

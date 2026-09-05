@@ -1,0 +1,1 @@
+Quantum computing is a rapidly-emerging technology that harnesses the laws of quantum mechanics to solve problems too complex for classical computers. Key concepts include qubits, superposition, and quantum entanglement.
