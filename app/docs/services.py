@@ -229,14 +229,14 @@ def generate_rag_response(session, user_query: str) -> str:
             if genai:
                 client = genai.Client(api_key=gemini_key)
                 res = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.6-flash",
                     contents=prompt,
                 )
                 if res and res.text:
                     return res.text.strip()
 
             # REST fallback for Gemini Generation API
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}"
             payload = {"contents": [{"parts": [{"text": prompt}]}]}
             resp = requests.post(url, json=payload, timeout=15)
             if resp.status_code == 200:
@@ -265,16 +265,5 @@ def generate_rag_response(session, user_query: str) -> str:
             return res.choices[0].message.content.strip()
         except Exception as e:
             logger.warning(f"OpenAI chat completion failed, falling back to local synthesizer: {e}")
-
-    # Fallback synthesized RAG response
-    sources = dict.fromkeys(c.document.title for c in top_chunks)
-    sources_str = ", ".join(sources.keys())
-    
-    reply = f"Based on your documents ({sources_str}), here are the relevant excerpts matching your query:\n\n"
-    for i, c in enumerate(top_chunks, start=1):
-        excerpt = c.content.strip().replace("\n", " ")
-        if len(excerpt) > 300:
-            excerpt = excerpt[:300] + "..."
-        reply += f"**Excerpt {i}** (from *{c.document.title}*, Page {c.page_number or 1}):\n> {excerpt}\n\n"
-
+    reply = f"Fail to find revalant informations. Please try again"
     return reply
