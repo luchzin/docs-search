@@ -4,16 +4,17 @@ import {
   MessageSquarePlus,
   PanelLeftClose,
   MessageSquare,
+  FileText,
   Pencil,
   Trash2,
   Check,
   X
 } from "@lucide/vue"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useChatStore } from "@/stores/chat"
+import { useDocumentsStore } from "@/stores/documents"
 import type { Chat } from "@/types"
 import DocumentDropzone from "./DocumentDropzone.vue"
 
@@ -26,7 +27,9 @@ const emit = defineEmits<{
 }>()
 
 const chatStore = useChatStore()
+const documentsStore = useDocumentsStore()
 
+const activeTab = ref<"chats" | "docs">("chats")
 const editingChatId = ref<string | null>(null)
 const editingTitle = ref("")
 const editInputRef = ref<HTMLInputElement | null>(null)
@@ -135,37 +138,83 @@ function handleDeleteChat(id: string, e: Event) {
     "
   >
     <!-- Header -->
-    <div class="flex items-center justify-between p-3">
-      <h1 class="truncate text-sm font-semibold">Doc Chat</h1>
+    <div class="flex h-14 shrink-0 items-center justify-between px-3 border-b border-sidebar-border">
+      <div class="flex items-center gap-2">
+        <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary text-secondary-foreground font-bold shadow-2xs">
+          <MessageSquare class="size-4" />
+        </div>
+        <h1 class="truncate text-sm font-bold">Doc Chat</h1>
+      </div>
       <Button variant="ghost" size="icon-sm" @click="emit('toggle')">
         <PanelLeftClose class="size-4" />
         <span class="sr-only">Close sidebar</span>
       </Button>
     </div>
 
-    <!-- New Chat Button -->
-    <div class="px-3 pb-3">
-      <Button
-        variant="outline"
-        class="w-full justify-start gap-2 border-dashed shadow-xs hover:bg-accent hover:text-accent-foreground"
-        @click="handleNewChat"
-      >
-        <MessageSquarePlus class="size-4" />
-        <span>New chat</span>
-      </Button>
+    <!-- Segmented Tab Navigation Switcher -->
+    <div class="px-3 py-2 border-b border-sidebar-border shrink-0">
+      <div class="grid grid-cols-2 gap-1 rounded-lg bg-muted/60 p-1 text-xs">
+        <button
+          type="button"
+          :class="
+            cn(
+              'flex items-center justify-center gap-1.5 rounded-md py-1.5 px-2 text-xs transition-all cursor-pointer',
+              activeTab === 'chats'
+                ? 'bg-secondary text-secondary-foreground font-semibold shadow-2xs'
+                : 'text-muted-foreground hover:text-foreground font-medium'
+            )
+          "
+          @click="activeTab = 'chats'"
+        >
+          <MessageSquare class="size-3.5" />
+          <span>Chats</span>
+          <span
+            v-if="chatStore.chats.length"
+            class="ml-0.5 rounded-full bg-black/10 dark:bg-black/20 px-1.5 py-0.2 text-[10px] font-bold"
+          >
+            {{ chatStore.chats.length }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          :class="
+            cn(
+              'flex items-center justify-center gap-1.5 rounded-md py-1.5 px-2 text-xs transition-all cursor-pointer',
+              activeTab === 'docs'
+                ? 'bg-secondary text-secondary-foreground font-semibold shadow-2xs'
+                : 'text-muted-foreground hover:text-foreground font-medium'
+            )
+          "
+          @click="activeTab = 'docs'"
+        >
+          <FileText class="size-3.5" />
+          <span>Docs</span>
+          <span
+            v-if="documentsStore.documents.length"
+            class="ml-0.5 rounded-full bg-black/10 dark:bg-black/20 px-1.5 py-0.2 text-[10px] font-bold"
+          >
+            {{ documentsStore.documents.length }}
+          </span>
+        </button>
+      </div>
     </div>
 
-    <Separator />
+    <!-- Tab 1: Chat Sessions List -->
+    <div v-if="activeTab === 'chats'" class="flex-1 flex flex-col min-h-0">
+      <div class="p-3 pb-2 shrink-0">
+        <Button
+          variant="outline"
+          class="w-full justify-start gap-2 border-dashed shadow-2xs hover:bg-accent hover:text-accent-foreground"
+          @click="handleNewChat"
+        >
+          <MessageSquarePlus class="size-4" />
+          <span>New chat</span>
+        </Button>
+      </div>
 
-    <!-- Chat History & Documents List -->
-    <div class="flex-1 overflow-y-auto px-3 py-2 space-y-4">
-      <!-- Chat History Section -->
-      <div>
-        <p class="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Chat History
-        </p>
-
-        <div v-if="!chatStore.chats.length" class="px-2 py-3 text-xs text-muted-foreground text-center rounded-md border border-dashed">
+      <div class="flex-1 overflow-y-auto px-3 py-2 space-y-3">
+        <div v-if="!chatStore.chats.length" class="px-2 py-4 text-xs text-muted-foreground text-center rounded-md border border-dashed">
           No chats yet. Start a new chat above!
         </div>
 
@@ -181,7 +230,7 @@ function handleDeleteChat(id: string, e: Event) {
                 cn(
                   'group relative flex items-center justify-between rounded-lg px-2.5 py-2 text-xs transition-colors cursor-pointer select-none',
                   chatStore.activeChatId === chat.id
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                    ? 'bg-sidebar-accent text-foreground font-semibold border-l-2 border-secondary pl-2'
                     : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground'
                 )
               "
@@ -249,16 +298,11 @@ function handleDeleteChat(id: string, e: Event) {
           </div>
         </div>
       </div>
+    </div>
 
-      <Separator />
-
-      <!-- Documents Section -->
-      <div>
-        <p class="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Documents
-        </p>
-        <DocumentDropzone />
-      </div>
+    <!-- Tab 2: Documents List & Upload -->
+    <div v-else class="flex-1 overflow-y-auto p-3 min-h-0">
+      <DocumentDropzone />
     </div>
   </aside>
 </template>
