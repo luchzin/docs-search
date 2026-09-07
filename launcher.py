@@ -22,6 +22,7 @@ else:
 FRONTEND_DIR = os.path.join(TARGET_DIR, "frontend")
 LAUNCH_URL = "http://localhost:5173"
 BROWSER_DELAY_SEC = 4
+DEBUG_FORCE_FAIL = False  # set True to force every managed subprocess call to fail (for testing error paths)
 # ---------------------
 
 
@@ -37,6 +38,101 @@ def get_npm_cmd():
     if sys.platform.startswith("win"):
         return "npm.cmd"
     return "npm"
+
+
+def get_python_cmd():
+    """
+    Find a real Python interpreter to run manage.py / pip with.
+
+    CRITICAL: never use sys.executable when this launcher itself has been
+    frozen (PyInstaller/py2exe/etc). In a frozen build, sys.executable
+    points at THIS launcher's own .exe, not at a Python interpreter — so
+    calling it re-spawns another copy of this GUI instead of running
+    Django/pip. That's the "new same window on each step" bug.
+
+    Returns a list (command prefix), e.g. ["C:\\Python311\\python.exe"]
+    or ["py", "-3"], never a bare string — some valid interpreters
+    (the Windows `py` launcher) are two tokens, not one.
+    """
+    if not getattr(sys, "frozen", False):
+        # Running as a normal .py script — sys.executable really is python.
+        return [sys.executable]
+
+    candidates = []
+
+    if sys.platform.startswith("win"):
+        # The `py` launcher is the most reliable way to find a real
+        # Windows Python install and isn't affected by the WindowsApps
+        # alias-stub problem below.
+        py_launcher = shutil.which("py")
+        if py_launcher:
+            candidates.append([py_launcher, "-3"])
+        candidates.append(["python"])
+        candidates.append(["python3"])
+    else:
+        candidates.append(["python3"])
+        candidates.append(["python"])
+
+    for cmd in candidates:
+        resolved = _resolve_and_validate_python(cmd)
+        if resolved:
+            return resolved
+
+    return None
+
+
+def _resolve_and_validate_python(cmd):
+    """
+    Resolve the first token of `cmd` via PATH and actually execute
+    `cmd --version` to confirm it's a real interpreter.
+
+    This specifically guards against the Windows "App execution alias"
+    stubs at %USERPROFILE%\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe
+    and python3.exe. Those exist on PATH by default on a clean Windows
+    install, shutil.which() happily finds them, but running them just
+    prints "Python was not found; run without arguments to install from
+    the Microsoft Store..." and exits with code 9009 — silently breaking
+    any code that trusts `which` alone.
+    """
+    exe = shutil.which(cmd[0])
+    if not exe:
+        return None
+
+    # Reject the known Microsoft Store alias-stub location outright,
+    # even if it happens to pass the --version probe on some systems.
+    if sys.platform.startswith("win") and "WindowsApps" in exe:
+        return None
+
+    try:
+        probe = [exe] + cmd[1:] + ["--version"]
+        creationflags = 0
+        if sys.platform.startswith("win"):
+            creationflags = subprocess.CREATE_NO_WINDOW
+        result = subprocess.run(
+            probe,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            creationflags=creationflags,
+            startupinfo=get_startupinfo(),
+        )
+        combined = (result.stdout or "") + (result.stderr or "")
+        if result.returncode == 0 and "python" in combined.lower():
+            return [exe] + cmd[1:]
+    except Exception:
+        pass
+
+    return None
+
+
+def get_startupinfo():
+    """Configure subprocess startup info to hide terminal windows on Windows."""
+    if sys.platform.startswith("win"):
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        si.wShowWindow = subprocess.SW_HIDE
+        return si
+    return None
 
 
 class AppLauncher:
@@ -57,8 +153,8 @@ class AppLauncher:
         # Handle app close event to cleanly kill all child processes & threads
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        # Auto-launch RAG app on load after window renders
-        self.root.after(600, self.auto_start_flow)
+        # Set initial ready status (Waiting for user click, NO auto-start)
+        self.set_status("Ready. Click Launch to start.")
 
     def create_widgets(self):
         # Header / Title Banner Frame
@@ -97,7 +193,7 @@ class AppLauncher:
 
         self.status_label = ttk.Label(
             ctrl_frame,
-            text="Status: Initializing...",
+            text="Status: Ready",
             font=("Helvetica", 10, "italic"),
         )
         self.status_label.pack(side=tk.RIGHT, padx=5)
@@ -177,23 +273,53 @@ class AppLauncher:
             pass
 
     def run_command_managed(self, cmd, cwd=None, shell=False):
-        """Executes a command and registers the process so it can be cleanly killed on window exit."""
+        """Executes a command silently in the background and registers the process."""
         if self.is_closing:
             return False
+
+        if DEBUG_FORCE_FAIL:
+            self.log(
+                f"[DEBUG_FORCE_FAIL] Skipping and failing: "
+                f"{' '.join(cmd) if isinstance(cmd, list) else cmd}"
+            )
+            return False
+
+        creationflags = 0
+        if sys.platform.startswith("win"):
+            creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
 
         popen_kwargs = {
             "cwd": cwd,
             "shell": shell,
-            "creationflags": (
-                subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform.startswith("win") else 0
-            ),
-            "preexec_fn": os.setsid if not sys.platform.startswith("win") else None,
+            "creationflags": creationflags,
+            "startupinfo": get_startupinfo(),
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.STDOUT,
+            "text": True,
+            "bufsize": 1,
         }
+
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else cmd
 
         try:
             p = subprocess.Popen(cmd, **popen_kwargs)
             with self.process_lock:
                 self.active_processes.append(p)
+
+            # Capture output as it streams so we can show it on failure,
+            # without ever swallowing it into DEVNULL.
+            output_lines = []
+
+            def _drain():
+                try:
+                    for line in iter(p.stdout.readline, ""):
+                        output_lines.append(line.rstrip())
+                    p.stdout.close()
+                except Exception:
+                    pass
+
+            drain_thread = threading.Thread(target=_drain, daemon=True)
+            drain_thread.start()
 
             # Wait for process while checking for closure
             while p.poll() is None:
@@ -202,13 +328,22 @@ class AppLauncher:
                     return False
                 time.sleep(0.1)
 
+            drain_thread.join(timeout=2)
+
             with self.process_lock:
                 if p in self.active_processes:
                     self.active_processes.remove(p)
 
+            if p.returncode != 0:
+                self.log(f"❌ Command failed ({cmd_str}) — exit code {p.returncode}")
+                tail = output_lines[-25:] if len(output_lines) > 25 else output_lines
+                for line in tail:
+                    if line.strip():
+                        self.log(f"    {line}")
+
             return p.returncode == 0
         except Exception as e:
-            self.log(f"Command error ({' '.join(cmd) if isinstance(cmd, list) else cmd}): {e}")
+            self.log(f"Command error ({cmd_str}): {e}")
             return False
 
     def install_git_managed(self):
@@ -256,9 +391,13 @@ class AppLauncher:
         if not os.path.exists(node_modules):
             return False
 
+        py_cmd = get_python_cmd()
+        if not py_cmd:
+            return False
+
         try:
             res = subprocess.run(
-                [sys.executable, "-c", "import django; import rest_framework"],
+                py_cmd + ["-c", "import django; import rest_framework"],
                 capture_output=True,
             )
             if res.returncode != 0:
@@ -267,19 +406,6 @@ class AppLauncher:
             return False
 
         return True
-
-    def auto_start_flow(self):
-        """Automatically checks readiness and launches on app startup."""
-        if self.is_closing:
-            return
-
-        if self.check_all_ready():
-            self.log("✨ All RAG dependencies and repository components are ready!")
-            self.log("🚀 Instantly starting servers & launching RAG assistant...")
-            self.start_servers_thread()
-        else:
-            self.log("📦 Setup required. Starting RAG setup and engine launch...")
-            self.start_full_flow_thread()
 
     def toggle_rag_app(self):
         """Single button action: launches RAG app if stopped, stops it if running."""
@@ -308,6 +434,8 @@ class AppLauncher:
                     self.update_button(tk.NORMAL, "🚀 Launch RAG Application")
                 return
             if not self.is_closing:
+                self.is_running = True
+                self.update_button(tk.NORMAL, "⏹️ Stop RAG Application")
                 self._start_servers()
         except Exception as e:
             if not self.is_closing:
@@ -349,13 +477,27 @@ class AppLauncher:
             if self.is_closing:
                 return False
 
-            # 3. Install Django dependencies
+            # 3. Resolve a real Python interpreter (never sys.executable if frozen)
+            py_cmd = get_python_cmd()
+            if not py_cmd:
+                self.log(
+                    "❌ No working Python interpreter found. Install Python 3 from "
+                    "https://python.org (check 'Add to PATH' during install), or if "
+                    "Python is already installed, disable the fake launcher at "
+                    "Settings > Apps > Advanced app settings > App execution aliases "
+                    "(turn OFF 'python.exe' and 'python3.exe')."
+                )
+                self.set_status("Error: Python Missing")
+                return False
+            self.log(f"✅ Using Python: {' '.join(py_cmd)}")
+
+            # 4. Install Django dependencies
             self.set_status("Installing RAG Backend dependencies...")
             req_file = os.path.join(TARGET_DIR, "requirements.txt")
             if os.path.exists(req_file):
                 self.log("Installing backend requirements...")
                 if not self.run_command_managed(
-                    [sys.executable, "-m", "pip", "install", "-r", req_file], cwd=TARGET_DIR
+                    py_cmd + ["-m", "pip", "install", "-r", req_file], cwd=TARGET_DIR
                 ):
                     return False
 
@@ -364,13 +506,13 @@ class AppLauncher:
 
             # Run migrations
             self.log("Running RAG database migrations...")
-            if not self.run_command_managed([sys.executable, "manage.py", "migrate"], cwd=TARGET_DIR):
+            if not self.run_command_managed(py_cmd + ["manage.py", "migrate"], cwd=TARGET_DIR):
                 return False
 
             if self.is_closing:
                 return False
 
-            # 4. Install Frontend dependencies
+            # 5. Install Frontend dependencies
             self.set_status("Installing RAG Frontend dependencies...")
             npm_bin = get_npm_cmd()
             if os.path.exists(FRONTEND_DIR):
@@ -421,21 +563,37 @@ class AppLauncher:
         if self.is_closing:
             return
 
+        py_cmd = get_python_cmd()
+        if not py_cmd:
+            self.log(
+                "❌ No working Python interpreter found. Install Python 3 from "
+                "https://python.org (check 'Add to PATH' during install), or if "
+                "Python is already installed, disable the fake launcher at "
+                "Settings > Apps > Advanced app settings > App execution aliases "
+                "(turn OFF 'python.exe' and 'python3.exe')."
+            )
+            self.set_status("Error: Python Missing")
+            self.is_running = False
+            self.update_button(tk.NORMAL, "🚀 Launch RAG Application")
+            return
+
         npm_bin = get_npm_cmd()
+        creationflags = 0
+        if sys.platform.startswith("win"):
+            creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+
         popen_kwargs = {
             "stdout": subprocess.PIPE,
             "stderr": subprocess.STDOUT,
             "text": True,
             "bufsize": 1,
-            "creationflags": (
-                subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform.startswith("win") else 0
-            ),
-            "preexec_fn": os.setsid if not sys.platform.startswith("win") else None,
+            "creationflags": creationflags,
+            "startupinfo": get_startupinfo(),
         }
 
         try:
-            # 1. Spawn Django Backend Server (Port 8000)
-            django_cmd = [sys.executable, "manage.py", "runserver", "8000"]
+            # 1. Spawn Django Backend Server (Port 8000) - Completely hidden
+            django_cmd = py_cmd + ["manage.py", "runserver", "8000"]
             self.log(f"Starting Django RAG API Server: {' '.join(django_cmd)}")
             p1 = subprocess.Popen(django_cmd, cwd=TARGET_DIR, **popen_kwargs)
             with self.process_lock:
@@ -446,7 +604,7 @@ class AppLauncher:
                 self.stop_servers()
                 return
 
-            # 2. Spawn Frontend Server (Vite)
+            # 2. Spawn Frontend Server (Vite) - Completely hidden
             frontend_cmd = [npm_bin, "run", "dev"]
             self.log(f"Starting Vue RAG Frontend Server: {' '.join(frontend_cmd)}")
             p2 = subprocess.Popen(
@@ -493,7 +651,11 @@ class AppLauncher:
         try:
             if p.poll() is None:
                 if sys.platform.startswith("win"):
-                    subprocess.call(["taskkill", "/F", "/T", "/PID", str(p.pid)])
+                    subprocess.call(
+                        ["taskkill", "/F", "/T", "/PID", str(p.pid)],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
                 else:
                     os.killpg(os.getpgid(p.pid), signal.SIGKILL)
         except Exception:
@@ -531,6 +693,12 @@ class AppLauncher:
 
 
 if __name__ == "__main__":
+    # Defensive guard: if this file is ever frozen (PyInstaller) and somehow
+    # invoked with extra args (e.g. by a broken subprocess call elsewhere),
+    # bail instead of opening another GUI window.
+    if getattr(sys, "frozen", False) and len(sys.argv) > 1:
+        sys.exit(0)
+
     root = tk.Tk()
     app = AppLauncher(root)
     root.mainloop()
