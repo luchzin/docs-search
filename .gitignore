@@ -70,3 +70,6 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 uploads/
+dist/
+build/
+launcher.spec
