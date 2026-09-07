@@ -29,44 +29,6 @@ def is_git_installed():
     return shutil.which("git") is not None
 
 
-def install_git(log_callback=print):
-    """Attempt to install Git based on the host OS."""
-    log_callback("Git is not detected. Attempting to install Git automatically...")
-    try:
-        if sys.platform.startswith("win"):
-            log_callback("Running: winget install --id Git.Git -e --source winget")
-            res = subprocess.run(
-                ["winget", "install", "--id", "Git.Git", "-e", "--source", "winget"],
-                capture_output=True,
-                text=True,
-            )
-            if res.returncode != 0:
-                log_callback("winget failed. Trying choco...")
-                subprocess.run(["choco", "install", "git", "-y"], check=True)
-        elif sys.platform.startswith("darwin"):
-            if shutil.which("brew"):
-                log_callback("Running: brew install git")
-                subprocess.run(["brew", "install", "git"], check=True)
-            else:
-                log_callback("Running: xcode-select --install")
-                subprocess.run(["xcode-select", "--install"], check=True)
-        elif sys.platform.startswith("linux"):
-            log_callback("Running: sudo apt-get update && sudo apt-get install -y git")
-            subprocess.run(["sudo", "apt-get", "update"], check=True)
-            subprocess.run(["sudo", "apt-get", "install", "-y", "git"], check=True)
-    except Exception as e:
-        log_callback(f"Auto-install git encountered an error: {e}")
-
-    if is_git_installed():
-        log_callback("Git successfully installed!")
-        return True
-    else:
-        log_callback(
-            "Could not install Git automatically. Please install Git manually from https://git-scm.com/downloads"
-        )
-        return False
-
-
 def get_npm_cmd():
     """Find npm executable across platforms."""
     npm_path = shutil.which("npm")
@@ -84,16 +46,18 @@ class AppLauncher:
         self.root.geometry("720x540")
         self.root.minsize(600, 400)
 
-        # Track child processes & status
-        self.processes = []
+        # Process management & execution flags
+        self.active_processes = []
+        self.process_lock = threading.Lock()
         self.is_running = False
+        self.is_closing = False
 
         self.create_widgets()
 
-        # Handle app close event to kill lingering child servers
+        # Handle app close event to cleanly kill all child processes & threads
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        # Auto-launch RAG app on load
+        # Auto-launch RAG app on load after window renders
         self.root.after(600, self.auto_start_flow)
 
     def create_widgets(self):
@@ -161,15 +125,126 @@ class AppLauncher:
         self.log_box.pack(fill=tk.BOTH, expand=True)
 
     def log(self, text):
-        """Thread-safe logging into the text area."""
+        """Thread-safe and shutdown-safe logging into the text area."""
+        if self.is_closing:
+            return
+
         def _write():
-            self.log_box.insert(tk.END, text + "\n")
-            self.log_box.see(tk.END)
-        self.root.after(0, _write)
+            try:
+                if not self.is_closing and self.root.winfo_exists():
+                    self.log_box.insert(tk.END, text + "\n")
+                    self.log_box.see(tk.END)
+            except Exception:
+                pass
+
+        try:
+            self.root.after(0, _write)
+        except Exception:
+            pass
 
     def set_status(self, text):
         """Update the status label safely from any thread."""
-        self.root.after(0, lambda: self.status_label.config(text=f"Status: {text}"))
+        if self.is_closing:
+            return
+
+        def _update():
+            try:
+                if not self.is_closing and self.root.winfo_exists():
+                    self.status_label.config(text=f"Status: {text}")
+            except Exception:
+                pass
+
+        try:
+            self.root.after(0, _update)
+        except Exception:
+            pass
+
+    def update_button(self, state, text):
+        """Update main button text and state safely."""
+        if self.is_closing:
+            return
+
+        def _update():
+            try:
+                if not self.is_closing and self.root.winfo_exists():
+                    self.btn_main.config(state=state, text=text)
+            except Exception:
+                pass
+
+        try:
+            self.root.after(0, _update)
+        except Exception:
+            pass
+
+    def run_command_managed(self, cmd, cwd=None, shell=False):
+        """Executes a command and registers the process so it can be cleanly killed on window exit."""
+        if self.is_closing:
+            return False
+
+        popen_kwargs = {
+            "cwd": cwd,
+            "shell": shell,
+            "creationflags": (
+                subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform.startswith("win") else 0
+            ),
+            "preexec_fn": os.setsid if not sys.platform.startswith("win") else None,
+        }
+
+        try:
+            p = subprocess.Popen(cmd, **popen_kwargs)
+            with self.process_lock:
+                self.active_processes.append(p)
+
+            # Wait for process while checking for closure
+            while p.poll() is None:
+                if self.is_closing:
+                    self._kill_process(p)
+                    return False
+                time.sleep(0.1)
+
+            with self.process_lock:
+                if p in self.active_processes:
+                    self.active_processes.remove(p)
+
+            return p.returncode == 0
+        except Exception as e:
+            self.log(f"Command error ({' '.join(cmd) if isinstance(cmd, list) else cmd}): {e}")
+            return False
+
+    def install_git_managed(self):
+        """Attempt to install Git based on the host OS."""
+        self.log("Git is not detected. Attempting to install Git automatically...")
+        try:
+            if sys.platform.startswith("win"):
+                self.log("Running: winget install --id Git.Git -e --source winget")
+                success = self.run_command_managed(
+                    ["winget", "install", "--id", "Git.Git", "-e", "--source", "winget"]
+                )
+                if not success:
+                    self.log("winget failed. Trying choco...")
+                    self.run_command_managed(["choco", "install", "git", "-y"])
+            elif sys.platform.startswith("darwin"):
+                if shutil.which("brew"):
+                    self.log("Running: brew install git")
+                    self.run_command_managed(["brew", "install", "git"])
+                else:
+                    self.log("Running: xcode-select --install")
+                    self.run_command_managed(["xcode-select", "--install"])
+            elif sys.platform.startswith("linux"):
+                self.log("Running: sudo apt-get update && sudo apt-get install -y git")
+                self.run_command_managed(["sudo", "apt-get", "update"])
+                self.run_command_managed(["sudo", "apt-get", "install", "-y", "git"])
+        except Exception as e:
+            self.log(f"Auto-install git encountered an error: {e}")
+
+        if is_git_installed():
+            self.log("Git successfully installed!")
+            return True
+        else:
+            self.log(
+                "Could not install Git automatically. Please install Git manually from https://git-scm.com/downloads"
+            )
+            return False
 
     def check_all_ready(self):
         """Check if repo and all dependencies are already installed."""
@@ -195,6 +270,9 @@ class AppLauncher:
 
     def auto_start_flow(self):
         """Automatically checks readiness and launches on app startup."""
+        if self.is_closing:
+            return
+
         if self.check_all_ready():
             self.log("✨ All RAG dependencies and repository components are ready!")
             self.log("🚀 Instantly starting servers & launching RAG assistant...")
@@ -205,6 +283,9 @@ class AppLauncher:
 
     def toggle_rag_app(self):
         """Single button action: launches RAG app if stopped, stops it if running."""
+        if self.is_closing:
+            return
+
         if self.is_running:
             self.stop_servers()
         else:
@@ -214,30 +295,41 @@ class AppLauncher:
                 self.start_full_flow_thread()
 
     def start_full_flow_thread(self):
-        self.btn_main.config(state=tk.DISABLED, text="⏳ Setting up RAG...")
+        if self.is_closing:
+            return
+        self.update_button(tk.DISABLED, "⏳ Setting up RAG...")
         threading.Thread(target=self._run_full_flow, daemon=True).start()
 
     def _run_full_flow(self):
         try:
-            if not self._run_setup():
-                self.log("❌ Setup failed. Stopping launch.")
-                self.root.after(0, lambda: self.btn_main.config(state=tk.NORMAL, text="🚀 Launch RAG Application"))
+            if self.is_closing or not self._run_setup():
+                if not self.is_closing:
+                    self.log("❌ Setup failed or cancelled. Stopping launch.")
+                    self.update_button(tk.NORMAL, "🚀 Launch RAG Application")
                 return
-            self._start_servers()
+            if not self.is_closing:
+                self._start_servers()
         except Exception as e:
-            self.log(f"❌ Error during launch flow: {e}")
-            self.root.after(0, lambda: self.btn_main.config(state=tk.NORMAL, text="🚀 Launch RAG Application"))
+            if not self.is_closing:
+                self.log(f"❌ Error during launch flow: {e}")
+                self.update_button(tk.NORMAL, "🚀 Launch RAG Application")
 
     def _run_setup(self):
         try:
+            if self.is_closing:
+                return False
+
             self.set_status("Checking Git & Repository...")
 
             # 1. Check / Install Git
             if not is_git_installed():
-                if not install_git(log_callback=self.log):
+                if not self.install_git_managed():
                     self.log("⚠️ Git is missing, but proceeding with local files if available...")
             else:
                 self.log("✅ Git environment verified.")
+
+            if self.is_closing:
+                return False
 
             # 2. Clone or verify Repo
             if not os.path.exists(os.path.join(TARGET_DIR, "manage.py")):
@@ -246,30 +338,37 @@ class AppLauncher:
                     self.set_status("Error: Git Missing")
                     return False
                 self.log(f"Cloning RAG codebase into {TARGET_DIR}...")
-                subprocess.run(["git", "clone", REPO_URL, TARGET_DIR], check=True)
+                if not self.run_command_managed(["git", "clone", REPO_URL, TARGET_DIR]):
+                    return False
             else:
                 self.log(f"RAG codebase present at {TARGET_DIR}.")
                 if is_git_installed() and os.path.exists(os.path.join(TARGET_DIR, ".git")):
-                    try:
-                        self.log("Fetching latest RAG updates...")
-                        subprocess.run(["git", "-C", TARGET_DIR, "pull"], check=False)
-                    except Exception as e:
-                        self.log(f"git pull notice: {e}")
+                    self.log("Fetching latest RAG updates...")
+                    self.run_command_managed(["git", "-C", TARGET_DIR, "pull"])
+
+            if self.is_closing:
+                return False
 
             # 3. Install Django dependencies
             self.set_status("Installing RAG Backend dependencies...")
             req_file = os.path.join(TARGET_DIR, "requirements.txt")
             if os.path.exists(req_file):
                 self.log("Installing backend requirements...")
-                subprocess.run(
-                    [sys.executable, "-m", "pip", "install", "-r", req_file],
-                    cwd=TARGET_DIR,
-                    check=True,
-                )
+                if not self.run_command_managed(
+                    [sys.executable, "-m", "pip", "install", "-r", req_file], cwd=TARGET_DIR
+                ):
+                    return False
+
+            if self.is_closing:
+                return False
 
             # Run migrations
             self.log("Running RAG database migrations...")
-            subprocess.run([sys.executable, "manage.py", "migrate"], cwd=TARGET_DIR, check=True)
+            if not self.run_command_managed([sys.executable, "manage.py", "migrate"], cwd=TARGET_DIR):
+                return False
+
+            if self.is_closing:
+                return False
 
             # 4. Install Frontend dependencies
             self.set_status("Installing RAG Frontend dependencies...")
@@ -277,16 +376,19 @@ class AppLauncher:
             if os.path.exists(FRONTEND_DIR):
                 if not os.path.exists(os.path.join(FRONTEND_DIR, "node_modules")):
                     self.log("Installing frontend packages (npm install)...")
-                    subprocess.run(
+                    if not self.run_command_managed(
                         [npm_bin, "install"],
                         cwd=FRONTEND_DIR,
-                        check=True,
                         shell=sys.platform.startswith("win"),
-                    )
+                    ):
+                        return False
                 else:
                     self.log("Frontend packages (node_modules) already present.")
             else:
                 self.log(f"⚠️ Frontend directory missing at {FRONTEND_DIR}")
+
+            if self.is_closing:
+                return False
 
             self.log("🎉 Setup complete!")
             self.set_status("Setup Complete")
@@ -298,6 +400,9 @@ class AppLauncher:
             return False
 
     def start_servers_thread(self):
+        if self.is_closing:
+            return
+
         if not os.path.exists(os.path.join(TARGET_DIR, "manage.py")):
             messagebox.showwarning("Warning", "Repository not found. Setup is required.")
             return
@@ -308,11 +413,14 @@ class AppLauncher:
 
         self.is_running = True
         self.set_status("Starting RAG Engine...")
-        self.root.after(0, lambda: self.btn_main.config(state=tk.NORMAL, text="⏹️ Stop RAG Application"))
+        self.update_button(tk.NORMAL, "⏹️ Stop RAG Application")
 
         threading.Thread(target=self._start_servers, daemon=True).start()
 
     def _start_servers(self):
+        if self.is_closing:
+            return
+
         npm_bin = get_npm_cmd()
         popen_kwargs = {
             "stdout": subprocess.PIPE,
@@ -330,8 +438,13 @@ class AppLauncher:
             django_cmd = [sys.executable, "manage.py", "runserver", "8000"]
             self.log(f"Starting Django RAG API Server: {' '.join(django_cmd)}")
             p1 = subprocess.Popen(django_cmd, cwd=TARGET_DIR, **popen_kwargs)
-            self.processes.append(p1)
+            with self.process_lock:
+                self.active_processes.append(p1)
             threading.Thread(target=self._read_stream, args=(p1, "Django API"), daemon=True).start()
+
+            if self.is_closing:
+                self.stop_servers()
+                return
 
             # 2. Spawn Frontend Server (Vite)
             frontend_cmd = [npm_bin, "run", "dev"]
@@ -342,53 +455,79 @@ class AppLauncher:
                 shell=sys.platform.startswith("win"),
                 **popen_kwargs,
             )
-            self.processes.append(p2)
+            with self.process_lock:
+                self.active_processes.append(p2)
             threading.Thread(target=self._read_stream, args=(p2, "Frontend"), daemon=True).start()
 
-            # 3. Wait for servers to start, then launch browser
+            # 3. Wait for servers to start, periodically checking for shutdown
             self.set_status("RAG Engine Active")
             self.log(f"Waiting {BROWSER_DELAY_SEC}s for RAG engine initialization...")
-            time.sleep(BROWSER_DELAY_SEC)
 
-            if self.is_running:
+            for _ in range(int(BROWSER_DELAY_SEC * 10)):
+                if self.is_closing or not self.is_running:
+                    return
+                time.sleep(0.1)
+
+            if self.is_running and not self.is_closing:
                 self.log(f"🌐 Opening browser for RAG Search at: {LAUNCH_URL}")
                 webbrowser.open(LAUNCH_URL)
 
         except Exception as e:
-            self.log(f"❌ Error starting servers: {e}")
-            self.stop_servers()
+            if not self.is_closing:
+                self.log(f"❌ Error starting servers: {e}")
+                self.stop_servers()
 
     def _read_stream(self, proc, prefix):
-        """Continuously pipe stdout/stderr to the log box."""
-        for line in iter(proc.stdout.readline, ""):
-            if not self.is_running:
-                break
-            self.log(f"[{prefix}] {line.strip()}")
-        proc.stdout.close()
+        """Continuously pipe stdout/stderr to the log box safely."""
+        try:
+            for line in iter(proc.stdout.readline, ""):
+                if self.is_closing or not self.is_running:
+                    break
+                self.log(f"[{prefix}] {line.strip()}")
+            proc.stdout.close()
+        except Exception:
+            pass
 
-    def stop_servers(self):
-        """Cleanly terminate both servers and processes."""
-        self.is_running = False
-        self.log("Stopping RAG application servers...")
-
-        for p in self.processes:
-            try:
+    def _kill_process(self, p):
+        """Safely terminate a child process and its process group."""
+        try:
+            if p.poll() is None:
                 if sys.platform.startswith("win"):
                     subprocess.call(["taskkill", "/F", "/T", "/PID", str(p.pid)])
                 else:
-                    os.killpg(os.getpgid(p.pid), signal.SIGTERM)
-            except Exception:
-                pass
+                    os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+        except Exception:
+            pass
 
-        self.processes.clear()
+    def stop_servers(self):
+        """Cleanly terminate all servers and child processes."""
+        self.is_running = False
+        self.log("Stopping RAG application servers & background processes...")
+
+        with self.process_lock:
+            for p in list(self.active_processes):
+                self._kill_process(p)
+            self.active_processes.clear()
+
         self.set_status("Stopped")
-        self.root.after(0, lambda: self.btn_main.config(state=tk.NORMAL, text="🚀 Launch RAG Application"))
+        self.update_button(tk.NORMAL, "🚀 Launch RAG Application")
         self.log("All RAG servers stopped.")
 
     def on_close(self):
-        """Ensure processes are killed when window is closed."""
-        self.stop_servers()
-        self.root.destroy()
+        """Ensure all child processes & threads are terminated immediately when window is closed."""
+        self.is_closing = True
+        self.is_running = False
+
+        # Kill all running child processes immediately
+        with self.process_lock:
+            for p in list(self.active_processes):
+                self._kill_process(p)
+            self.active_processes.clear()
+
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
