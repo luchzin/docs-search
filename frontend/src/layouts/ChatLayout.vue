@@ -4,18 +4,29 @@ import { useDark } from "@vueuse/core";
 import AppSidebar from "@/components/chat/AppSidebar.vue";
 import ChatInput from "@/components/chat/ChatInput.vue";
 import MessageList from "@/components/chat/MessageList.vue";
+import SettingsPage from "@/components/settings/SettingsPage.vue";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MoonStar, Sun, PanelLeftOpen, PanelLeftClose, LogOut, LogIn } from "@lucide/vue";
+import {
+  MoonStar,
+  Sun,
+  PanelLeftOpen,
+  PanelLeftClose,
+  LogOut,
+  LogIn,
+  Download,
+} from "@lucide/vue";
 import AuthModal from "@/components/auth/AuthModal.vue";
 import { useAuthStore } from "../stores/auth";
 import { useChatStore } from "../stores/chat";
 
 const authStore = useAuthStore();
 const chatStore = useChatStore();
+
+const activeView = ref<"chat" | "settings">("chat");
 const sidebarOpen = ref(
-  typeof window !== "undefined" ? window.innerWidth >= 768 : true,
+  typeof window !== "undefined" ? window.innerWidth >= 768 : true
 );
 const isAuthModalOpen = ref(false);
 const isDark = useDark();
@@ -32,14 +43,32 @@ onMounted(async () => {
     isAuthModalOpen.value = true;
   }
 });
+
+function download() {
+  if ((navigator as any).userAgentData?.getHighEntropyValues) {
+    (navigator as any).userAgentData
+      .getHighEntropyValues(["platform"])
+      .then((ua: { platform: string }) => {
+        const isWindowsHighEntropy = ua.platform === "Windows";
+        console.log("Is Windows:", isWindowsHighEntropy);
+      });
+  }
+}
 </script>
 
 <template>
   <TooltipProvider>
     <div class="relative flex h-dvh overflow-hidden bg-background">
-      <AppSidebar :open="sidebarOpen" @toggle="sidebarOpen = !sidebarOpen" />
+      <AppSidebar
+        :open="sidebarOpen"
+        :current-view="activeView"
+        @toggle="sidebarOpen = !sidebarOpen"
+        @open-settings="activeView = 'settings'"
+        @open-chat="activeView = 'chat'"
+      />
 
       <main class="flex min-w-0 flex-1 flex-col">
+        <!-- Header -->
         <header
           class="flex h-14 shrink-0 items-center justify-between border-b px-3 sm:px-4"
         >
@@ -54,23 +83,39 @@ onMounted(async () => {
               <PanelLeftOpen v-else class="size-4" />
               <span class="sr-only">Toggle sidebar</span>
             </Button>
-            <h2 class="text-sm font-semibold text-foreground truncate max-w-[180px] sm:max-w-xs md:max-w-sm">
-              {{ chatStore.activeChat?.title || "RAG Document Chat" }}
+            <h2
+              class="text-sm font-semibold text-foreground truncate max-w-45 sm:max-w-xs md:max-w-sm"
+            >
+              {{
+                activeView === "settings"
+                  ? "Settings & Configuration"
+                  : chatStore.activeChat?.title || "RAG Document Chat"
+              }}
             </h2>
           </div>
 
-          <div class="flex items-center space-x-2 sm:space-x-4">
+          <div class="flex items-center space-x-2 sm:space-x-3">
             <AuthModal v-model:open="isAuthModalOpen" />
 
             <!-- User Auth Status Display -->
             <template v-if="authStore.isAuthenticated && authStore.user">
               <div class="flex items-center gap-2">
                 <Avatar class="h-7 w-7">
-                  <AvatarFallback class="text-xs uppercase bg-primary/10 text-primary font-medium">
-                    {{ (authStore.user.username || authStore.user.email || "U").slice(0, 2) }}
+                  <AvatarFallback
+                    class="text-xs uppercase bg-primary/10 text-primary font-medium"
+                  >
+                    {{
+                      (
+                        authStore.user.username ||
+                        authStore.user.email ||
+                        "U"
+                      ).slice(0, 2)
+                    }}
                   </AvatarFallback>
                 </Avatar>
-                <span class="text-xs font-medium text-muted-foreground hidden md:inline truncate max-w-[120px]">
+                <span
+                  class="text-xs font-medium text-muted-foreground hidden md:inline truncate max-w-30"
+                >
                   {{ authStore.user.username || authStore.user.email }}
                 </span>
                 <Button
@@ -98,13 +143,29 @@ onMounted(async () => {
             </template>
 
             <!-- Theme Toggle -->
-            <Button variant="ghost" size="icon" @click="isDark = !isDark">
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-8 w-8 px-0"
+              @click="isDark = !isDark"
+            >
               <Sun v-if="isDark" class="h-4 w-4" />
               <MoonStar v-else class="h-4 w-4" />
               <span class="sr-only">Toggle dark mode</span>
             </Button>
 
-            <!-- GitHub Link with Custom SVG -->
+            <!-- Download button -->
+            <Button
+              variant="ghost"
+              size="icon"
+              class="h-8 w-8 px-0"
+              @click="download"
+              title="Download Application"
+            >
+              <Download class="h-4 w-4" />
+            </Button>
+
+            <!-- GitHub Link -->
             <Button variant="ghost" size="icon" as-child>
               <a
                 href="https://github.com/luchzin/docs-search"
@@ -129,11 +190,16 @@ onMounted(async () => {
           </div>
         </header>
 
-        <div class="min-h-0 flex-1">
-          <MessageList />
-        </div>
-
-        <ChatInput />
+        <!-- Main Body: Settings View OR Chat View -->
+        <template v-if="activeView === 'settings'">
+          <SettingsPage @back-to-chat="activeView = 'chat'" />
+        </template>
+        <template v-else>
+          <div class="min-h-0 flex-1">
+            <MessageList />
+          </div>
+          <ChatInput />
+        </template>
       </main>
     </div>
   </TooltipProvider>

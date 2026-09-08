@@ -8,26 +8,32 @@ import {
   Pencil,
   Trash2,
   Check,
-  X
+  X,
+  Settings
 } from "@lucide/vue"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useChatStore } from "@/stores/chat"
 import { useDocumentsStore } from "@/stores/documents"
+import { useModelStore } from "@/stores/model"
 import type { Chat } from "@/types"
 import DocumentDropzone from "./DocumentDropzone.vue"
 
 defineProps<{
   open: boolean
+  currentView?: "chat" | "settings"
 }>()
 
 const emit = defineEmits<{
   toggle: []
+  openSettings: []
+  openChat: []
 }>()
 
 const chatStore = useChatStore()
 const documentsStore = useDocumentsStore()
+const modelStore = useModelStore()
 
 const activeTab = ref<"chats" | "docs">("chats")
 const editingChatId = ref<string | null>(null)
@@ -78,11 +84,13 @@ const chatGroups = computed<ChatGroup[]>(() => {
 
 function handleNewChat() {
   chatStore.createNewChat()
+  emit('openChat')
 }
 
 function selectChat(id: string) {
   if (editingChatId.value === id) return
   chatStore.selectChat(id)
+  emit('openChat')
 }
 
 async function startRenaming(chat: Chat, e: Event) {
@@ -303,6 +311,30 @@ function handleDeleteChat(id: string, e: Event) {
     <!-- Tab 2: Documents List & Upload -->
     <div v-else class="flex-1 overflow-y-auto p-3 min-h-0">
       <DocumentDropzone />
+    </div>
+
+    <!-- Sidebar Footer / Settings -->
+    <div class="p-3 border-t border-sidebar-border shrink-0">
+      <button
+        type="button"
+        :class="
+          cn(
+            'flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-colors cursor-pointer select-none',
+            currentView === 'settings'
+              ? 'bg-secondary text-secondary-foreground font-semibold shadow-2xs'
+              : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground'
+          )
+        "
+        @click="emit('openSettings')"
+      >
+        <div class="flex items-center gap-2">
+          <Settings class="size-4 opacity-80" />
+          <span>Settings</span>
+        </div>
+        <span class="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono truncate max-w-24">
+          {{ modelStore.selectedModel.name }}
+        </span>
+      </button>
     </div>
   </aside>
 </template>

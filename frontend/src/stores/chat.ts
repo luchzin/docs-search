@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { Chat, ChatMessage } from "@/types";
 import { useDocumentsStore } from "@/stores/documents";
+import { useModelStore } from "@/stores/model";
 import { api } from "@/lib/utils";
 
 const STORAGE_CHATS_KEY = "doc_search_chats";
@@ -209,10 +210,13 @@ export const useChatStore = defineStore("chat", () => {
     saveToStorage();
 
     isLoading.value = true;
+    const modelStore = useModelStore();
 
     try {
       const res = await api.post(`/chat/${targetChat.id}/send-message/`, {
         content: trimmed,
+        model: modelStore.selectedModelId,
+        api_key: modelStore.currentApiKey || undefined,
       });
 
       if (res.data?.user_message && res.data?.assistant_message) {
