@@ -3,6 +3,7 @@ import { ref, computed } from "vue";
 import type { Chat, ChatMessage } from "@/types";
 import { useDocumentsStore } from "@/stores/documents";
 import { useModelStore } from "@/stores/model";
+import { useAuthStore } from "@/stores/auth";
 import { api } from "@/lib/utils";
 
 const STORAGE_CHATS_KEY = "doc_search_chats";
@@ -37,6 +38,13 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   function loadFromStorage() {
+    const authStore = useAuthStore();
+    if (!authStore.isAuthenticated) {
+      chats.value = [];
+      activeChatId.value = null;
+      return;
+    }
+
     try {
       const storedChats = localStorage.getItem(STORAGE_CHATS_KEY);
       const storedActiveId = localStorage.getItem(STORAGE_ACTIVE_KEY);
@@ -61,6 +69,13 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   async function fetchChats() {
+    const authStore = useAuthStore();
+    if (!authStore.isAuthenticated) {
+      chats.value = [];
+      activeChatId.value = null;
+      return;
+    }
+
     try {
       const res = await api.get<any[]>("/chat/");
       if (Array.isArray(res.data)) {
@@ -174,6 +189,12 @@ export const useChatStore = defineStore("chat", () => {
   async function sendMessage(content: string) {
     const trimmed = content.trim();
     if (!trimmed || isLoading.value) return;
+
+    const authStore = useAuthStore();
+    if (!authStore.isAuthenticated) {
+      error.value = "Authentication required. Please sign in to send messages.";
+      return;
+    }
 
     const documentsStore = useDocumentsStore();
 

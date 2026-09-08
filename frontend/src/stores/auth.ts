@@ -110,6 +110,8 @@ export const useAuthStore = defineStore("auth", () => {
     error.value = null;
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
+    localStorage.removeItem("doc_search_chats");
+    localStorage.removeItem("doc_search_active_chat_id");
   }
 
   return {

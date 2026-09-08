@@ -1,58 +1,58 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
-import { Loader2, Lock, Mail, User as UserIcon } from "lucide-vue-next"
-import { useAuthStore } from "@/stores/auth"
+import { ref, watch } from "vue";
+import { Loader2, Lock, Mail, User as UserIcon } from "lucide-vue-next";
+import { useAuthStore } from "@/stores/auth";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs"
+} from "@/components/ui/tabs";
 
-const isOpen = defineModel<boolean>("open", { default: false })
-const authStore = useAuthStore()
+const isOpen = defineModel<boolean>("open", { default: false });
+const authStore = useAuthStore();
 const loginForm = ref({
   email: "",
   password: "",
-})
+});
 const registerForm = ref({
   name: "",
   email: "",
   password: "",
-})
+});
 
 watch(isOpen, () => {
-  authStore.error = null
-})
+  authStore.error = null;
+});
 
 async function handleLogin() {
-  authStore.error = null
+  authStore.error = null;
   try {
-    await authStore.login(loginForm.value)
-    isOpen.value = false // Close modal on success
+    await authStore.login(loginForm.value);
+    isOpen.value = false;
   } catch {
-    // Error is handled via authStore.error
+    // Error handled via authStore.error
   }
 }
 
 async function handleRegister() {
-  authStore.error = null
+  authStore.error = null;
   try {
-    await authStore.register(registerForm.value)
-    isOpen.value = false // Close modal on success
+    await authStore.register(registerForm.value);
+    isOpen.value = false;
   } catch {
-    // Error is handled via authStore.error
+    // Error handled via authStore.error
   }
 }
 </script>
@@ -61,16 +61,16 @@ async function handleRegister() {
   <Dialog v-model:open="isOpen">
     <DialogContent class="sm:max-w-106.25">
       <DialogHeader>
-        <DialogTitle class="text-xl">Authentication Optional</DialogTitle>
-        <DialogDescription>
-          Sign in or create an account to save your progress and access extra features.
+        <DialogTitle class="text-xl font-bold">Authentication Required</DialogTitle>
+        <DialogDescription class="text-xs text-muted-foreground">
+          Please sign in or create an account to access chats, documents, and model settings.
         </DialogDescription>
       </DialogHeader>
 
       <!-- Global Auth Error Alert -->
       <div
         v-if="authStore.error"
-        class="p-3 text-sm text-destructive bg-destructive/10 rounded-md border border-destructive/20 font-medium"
+        class="p-3 text-xs text-destructive bg-destructive/10 rounded-md border border-destructive/20 font-medium"
       >
         {{ authStore.error }}
       </div>
@@ -93,7 +93,7 @@ async function handleRegister() {
                   v-model="loginForm.email"
                   type="email"
                   placeholder="m@example.com"
-                  class="pl-9"
+                  class="pl-9 text-xs"
                   required
                 />
               </div>
@@ -106,18 +106,15 @@ async function handleRegister() {
                   id="modal-login-password"
                   v-model="loginForm.password"
                   type="password"
-                  class="pl-9"
+                  class="pl-9 text-xs"
                   required
                 />
               </div>
             </div>
-            <div class="pt-2 flex flex-col gap-2">
-              <Button type="submit" class="w-full" :disabled="authStore.isLoading">
+            <div class="pt-2">
+              <Button type="submit" class="w-full font-semibold" :disabled="authStore.isLoading">
                 <Loader2 v-if="authStore.isLoading" class="mr-2 h-4 w-4 animate-spin" />
                 Sign In
-              </Button>
-              <Button type="button" variant="ghost" class="w-full" @click="isOpen = false">
-                Continue as Guest
               </Button>
             </div>
           </form>
@@ -134,7 +131,7 @@ async function handleRegister() {
                   id="modal-reg-name"
                   v-model="registerForm.name"
                   placeholder="John Doe"
-                  class="pl-9"
+                  class="pl-9 text-xs"
                   required
                 />
               </div>
@@ -148,7 +145,7 @@ async function handleRegister() {
                   v-model="registerForm.email"
                   type="email"
                   placeholder="m@example.com"
-                  class="pl-9"
+                  class="pl-9 text-xs"
                   required
                 />
               </div>
@@ -161,18 +158,15 @@ async function handleRegister() {
                   id="modal-reg-password"
                   v-model="registerForm.password"
                   type="password"
-                  class="pl-9"
+                  class="pl-9 text-xs"
                   required
                 />
               </div>
             </div>
-            <div class="pt-2 flex flex-col gap-2">
-              <Button type="submit" class="w-full" :disabled="authStore.isLoading">
+            <div class="pt-2">
+              <Button type="submit" class="w-full font-semibold" :disabled="authStore.isLoading">
                 <Loader2 v-if="authStore.isLoading" class="mr-2 h-4 w-4 animate-spin" />
                 Create Account
-              </Button>
-              <Button type="button" variant="ghost" class="w-full" @click="isOpen = false">
-                Continue as Guest
               </Button>
             </div>
           </form>
