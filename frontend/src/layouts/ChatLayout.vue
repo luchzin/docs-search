@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, watchEffect, onMounted, watch } from "vue";
 import { useDark } from "@vueuse/core";
 import AppSidebar from "@/components/chat/AppSidebar.vue";
 import ChatInput from "@/components/chat/ChatInput.vue";
@@ -31,6 +31,23 @@ const sidebarOpen = ref(
 );
 const isAuthModalOpen = ref(false);
 const isDark = useDark();
+
+const pageTitle = computed(() => {
+  if (!authStore.isAuthenticated) {
+    return "Sign In - Doc Search";
+  }
+  if (activeView.value === "settings") {
+    return "Settings & Configuration - Doc Search";
+  }
+  if (chatStore.activeChat?.title) {
+    return `${chatStore.activeChat.title} - Doc Search`;
+  }
+  return "RAG Document Chat - Doc Search";
+});
+
+watchEffect(() => {
+  document.title = pageTitle.value;
+});
 
 onMounted(async () => {
   if (window.innerWidth < 768) {
