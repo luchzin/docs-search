@@ -16,7 +16,6 @@ import {
   LogOut,
   LogIn,
   Download,
-  Lock,
 } from "@lucide/vue";
 import AuthModal from "@/components/auth/AuthModal.vue";
 import { useAuthStore } from "../stores/auth";
@@ -33,9 +32,6 @@ const isAuthModalOpen = ref(false);
 const isDark = useDark();
 
 const pageTitle = computed(() => {
-  if (!authStore.isAuthenticated) {
-    return "Sign In - Doc Search";
-  }
   if (activeView.value === "settings") {
     return "Settings & Configuration - Doc Search";
   }
@@ -56,21 +52,13 @@ onMounted(async () => {
   if (authStore.token && !authStore.user) {
     await authStore.fetchCurrentUser();
   }
-  if (authStore.isAuthenticated) {
-    await chatStore.fetchChats();
-  } else {
-    isAuthModalOpen.value = true;
-  }
+  await chatStore.fetchChats();
 });
 
 watch(
   () => authStore.isAuthenticated,
-  (isAuth) => {
-    if (isAuth) {
-      chatStore.fetchChats();
-    } else {
-      isAuthModalOpen.value = true;
-    }
+  () => {
+    chatStore.fetchChats();
   }
 );
 
@@ -117,9 +105,7 @@ function download() {
               class="text-sm font-semibold text-foreground truncate max-w-45 sm:max-w-xs md:max-w-sm"
             >
               {{
-                !authStore.isAuthenticated
-                  ? "Authentication Required"
-                  : activeView === "settings"
+                activeView === "settings"
                   ? "Settings & Configuration"
                   : chatStore.activeChat?.title || "RAG Document Chat"
               }}
@@ -222,33 +208,8 @@ function download() {
           </div>
         </header>
 
-        <!-- Main Body: Unauthenticated Guard OR Settings View OR Chat View -->
-        <template v-if="!authStore.isAuthenticated">
-          <div class="flex flex-1 flex-col items-center justify-center p-6 text-center bg-muted/10">
-            <div class="mx-auto max-w-md space-y-4 rounded-2xl border bg-card p-8 shadow-md">
-              <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-                <Lock class="h-7 w-7" />
-              </div>
-              <div class="space-y-1.5">
-                <h3 class="text-xl font-bold tracking-tight text-foreground">
-                  Sign In Required
-                </h3>
-                <p class="text-xs text-muted-foreground leading-relaxed">
-                  You must be logged in to view chat messages, upload documents, or configure AI model settings.
-                </p>
-              </div>
-              <Button
-                size="default"
-                class="w-full font-semibold gap-2 mt-2"
-                @click="isAuthModalOpen = true"
-              >
-                <LogIn class="h-4 w-4" />
-                <span>Sign In / Create Account</span>
-              </Button>
-            </div>
-          </div>
-        </template>
-        <template v-else-if="activeView === 'settings'">
+        <!-- Main Body: Settings View OR Chat View -->
+        <template v-if="activeView === 'settings'">
           <SettingsPage @back-to-chat="activeView = 'chat'" />
         </template>
         <template v-else>

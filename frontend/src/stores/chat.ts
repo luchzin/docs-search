@@ -25,6 +25,9 @@ export const useChatStore = defineStore("chat", () => {
   const messages = computed(() => activeChat.value?.messages || []);
 
   function saveToStorage() {
+    const authStore = useAuthStore();
+    if (!authStore.isAuthenticated) return;
+
     try {
       localStorage.setItem(STORAGE_CHATS_KEY, JSON.stringify(chats.value));
       if (activeChatId.value) {
@@ -73,6 +76,7 @@ export const useChatStore = defineStore("chat", () => {
     if (!authStore.isAuthenticated) {
       chats.value = [];
       activeChatId.value = null;
+      await createNewChat();
       return;
     }
 
@@ -105,6 +109,10 @@ export const useChatStore = defineStore("chat", () => {
       }
     } catch (e) {
       console.warn("Django API unreachable or unauthorized; using local cache", e);
+    }
+
+    if (chats.value.length === 0) {
+      await createNewChat();
     }
   }
 
@@ -189,12 +197,6 @@ export const useChatStore = defineStore("chat", () => {
   async function sendMessage(content: string) {
     const trimmed = content.trim();
     if (!trimmed || isLoading.value) return;
-
-    const authStore = useAuthStore();
-    if (!authStore.isAuthenticated) {
-      error.value = "Authentication required. Please sign in to send messages.";
-      return;
-    }
 
     const documentsStore = useDocumentsStore();
 

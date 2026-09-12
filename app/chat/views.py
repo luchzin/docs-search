@@ -14,14 +14,13 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
     user = self.request.user
     if user.is_authenticated:
       return ChatSession.objects.filter(user=user).order_by("-updated_at")
+    if getattr(self, "action", None) == "list":
+      return ChatSession.objects.none()
     return ChatSession.objects.filter(user__isnull=True).order_by("-updated_at")
 
   def perform_create(self, serializer):
-    user = self.request.user
-    if user.is_authenticated:
-      serializer.save(user=user)
-    else:
-      serializer.save()
+    user = self.request.user if self.request.user.is_authenticated else None
+    serializer.save(user=user)
 
   @action(detail=True, methods=["post"], url_path="send-message")
   def send_message(self, request, pk=None):
