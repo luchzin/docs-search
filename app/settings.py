@@ -1,21 +1,33 @@
 from datetime import timedelta
 import os
 from pathlib import Path
-import dj_database_url  # pip install dj-database-url
+import dj_database_url
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-MEDIA_URL = '/uploads/'
-MEDIA_ROOT = BASE_DIR / 'uploads'
 
-# Environment-based core settings
+# Core settings
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-fallback-key-do-not-use-in-prod')
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-# Parse comma-separated string into a list
+# Hosts & Render Domain Handling
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',') if host.strip()]
+
+# Auto-add Render's dynamic hostname if running on Render
+RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# CSRF Trusted Origins (needed for POST requests from Render domain or frontend)
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -25,13 +37,15 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    "corsheaders",
+    'whitenoise.runserver_nostatic',  # Handles static in dev seamlessly
     'django.contrib.staticfiles',
-    "rest_framework",
+    'corsheaders',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'djoser',
+    'drf_spectacular',
     'app.chat',
     'app.docs',
-    'djoser',
-    "drf_spectacular",
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -39,9 +53,11 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
+# SecurityMiddleware FIRST, then WhiteNoise, then CorsMiddleware
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -50,15 +66,36 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Static & Media Files
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+MEDIA_URL = '/uploads/'
+MEDIA_ROOT = BASE_DIR / 'uploads'
+
+# CORS Settings
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 'yes')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
-
-# In production, set this to False and configure CORS_ALLOWED_ORIGINS in .env
-CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 'yes')
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
@@ -97,14 +134,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
-# Database Configuration:
-# Supports a single DATABASE_URL (common in cloud providers like Neon/Supabase/Render)
-# or individual DB_* variables for local Docker setups.
+# Database Configuration with SSL requirement for remote databases
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
     DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True,
+        )
     }
 else:
     DATABASES = {
@@ -130,5 +170,4 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
