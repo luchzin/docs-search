@@ -44,8 +44,13 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
         session=session, role="user", content=user_content
     )
 
+    model_name = request.data.get("model")
+    api_key_val = request.data.get("api_key")
+
     # 2. Call RAG pipeline (vector search in pgvector -> generate LLM/context response)
-    assistant_reply_text = generate_rag_response(session, user_content)
+    assistant_reply_text = generate_rag_response(
+        session, user_content, model_name=model_name, api_key=api_key_val
+    )
 
     # 3. Save assistant message
     assistant_msg = Message.objects.create(

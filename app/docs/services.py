@@ -64,35 +64,46 @@ def _generate_deterministic_embedding(text: str, dim: int = 1536) -> list[float]
     return vec
 
 
-def get_embedding(text: str) -> list[float]:
+def get_embedding(text: str, api_key: str | None = None) -> list[float]:
     """Generates 1536-dimensional vector embedding using Gemini API, OpenAI API, or fallback."""
-    gemini_key = get_gemini_api_key()
+    gemini_key = api_key or get_gemini_api_key()
     if gemini_key:
         try:
             if genai:
                 client = genai.Client(api_key=gemini_key)
-                res = client.models.embed_content(
-                    model="text-embedding-004",
-                    contents=text,
-                    config=types.EmbedContentConfig(output_dimensionality=1536),
-                )
-                if res and res.embedding and res.embedding.values:
-                    return list(res.embedding.values)
+                for embed_model in ["gemini-embedding-001", "gemini-embedding-2", "text-embedding-004"]:
+                    try:
+                        res = client.models.embed_content(
+                            model=embed_model,
+                            contents=text,
+                            config=types.EmbedContentConfig(output_dimensionality=1536),
+                        )
+                        if res:
+                            vals = None
+                            if hasattr(res, "embeddings") and res.embeddings:
+                                vals = res.embeddings[0].values
+                            elif hasattr(res, "embedding") and res.embedding:
+                                vals = getattr(res.embedding, "values", None)
+                            if vals:
+                                return list(vals)
+                    except Exception as e:
+                        logger.debug(f"Gemini embed_content with {embed_model} failed: {e}")
 
             # REST fallback for Gemini Embeddings API
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={gemini_key}"
-            payload = {
-                "model": "models/text-embedding-004",
-                "content": {"parts": [{"text": text}]},
-                "outputDimensionality": 1536,
-            }
-            resp = requests.post(url, json=payload, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                vals = data.get("embedding", {}).get("values")
-                if vals:
-                    return list(vals)
-            logger.warning(f"Gemini embedding REST response non-200: {resp.status_code} {resp.text}")
+            for embed_model in ["gemini-embedding-001", "gemini-embedding-2", "text-embedding-004"]:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{embed_model}:embedContent?key={gemini_key}"
+                payload = {
+                    "model": f"models/{embed_model}",
+                    "content": {"parts": [{"text": text}]},
+                    "outputDimensionality": 1536,
+                }
+                resp = requests.post(url, json=payload, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    vals = data.get("embedding", {}).get("values")
+                    if vals:
+                        return list(vals)
+            logger.warning("Gemini embedding REST response non-200")
         except Exception as e:
             logger.warning(f"Gemini embedding API failed, checking OpenAI / fallback: {e}")
 
@@ -196,9 +207,9 @@ def process_and_store_document(document: Document) -> list[DocumentChunk]:
     return created_chunks
 
 
-def generate_rag_response(session, user_query: str) -> str:
+def generate_rag_response(session, user_query: str, model_name: str | None = None, api_key: str | None = None) -> str:
     """Executes RAG pipeline: embeds user query, searches pgvector, and generates response via Gemini/OpenAI/Synthesizer."""
-    query_embedding = get_embedding(user_query)
+    query_embedding = get_embedding(user_query, api_key=api_key)
 
     chunk_qs = DocumentChunk.objects.filter(document__session=session)
     if not chunk_qs.exists():
@@ -218,35 +229,46 @@ def generate_rag_response(session, user_query: str) -> str:
     )
     prompt = (
         "You are an AI assistant helping with document search and retrieval.\n"
-        "Answer the user's question accurately using ONLY the provided document context below.\n\n"
+        "Answer the user's question accurately using ONLY the provided document context below.\n"
+        "Include the document title in your response as the source reference.\n\n"
         f"Context:\n{context_text}\n\n"
         f"User Question: {user_query}\nAnswer:"
     )
 
-    gemini_key = get_gemini_api_key()
+    gemini_key = api_key or get_gemini_api_key()
+    target_gemini_model = model_name if (model_name and "gemini" in model_name) else "gemini-3.6-flash"
+
     if gemini_key:
         try:
             if genai:
                 client = genai.Client(api_key=gemini_key)
-                res = client.models.generate_content(
-                    model="gemini-3.6-flash",
-                    contents=prompt,
-                )
-                if res and res.text:
-                    return res.text.strip()
+                for g_model in [target_gemini_model, "gemini-3.6-flash", "gemini-2.5-flash"]:
+                    try:
+                        res = client.models.generate_content(
+                            model=g_model,
+                            contents=prompt,
+                            config=types.GenerateContentConfig(
+                                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
+                            ),
+                        )
+                        if res and res.text:
+                            return res.text.strip()
+                    except Exception as ge:
+                        logger.debug(f"Gemini generate_content with {g_model} failed: {ge}")
 
             # REST fallback for Gemini Generation API
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={gemini_key}"
-            payload = {"contents": [{"parts": [{"text": prompt}]}]}
-            resp = requests.post(url, json=payload, timeout=15)
-            if resp.status_code == 200:
-                data = resp.json()
-                candidates = data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts:
-                        return parts[0].get("text", "").strip()
-            logger.warning(f"Gemini generation REST response non-200: {resp.status_code} {resp.text}")
+            for g_model in [target_gemini_model, "gemini-3.6-flash", "gemini-2.5-flash"]:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{g_model}:generateContent?key={gemini_key}"
+                payload = {"contents": [{"parts": [{"text": prompt}]}]}
+                resp = requests.post(url, json=payload, timeout=15)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            return parts[0].get("text", "").strip()
+            logger.warning("Gemini generation REST response non-200")
         except Exception as e:
             logger.warning(f"Gemini generation API failed, checking OpenAI / fallback: {e}")
 
@@ -254,8 +276,9 @@ def generate_rag_response(session, user_query: str) -> str:
     if openai_key and openai:
         try:
             client = openai.OpenAI(api_key=openai_key)
+            target_openai_model = model_name if (model_name and "gpt" in model_name) else "gpt-4o-mini"
             res = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=target_openai_model,
                 messages=[
                     {"role": "system", "content": "You are a helpful document retrieval assistant."},
                     {"role": "user", "content": prompt},
@@ -265,5 +288,7 @@ def generate_rag_response(session, user_query: str) -> str:
             return res.choices[0].message.content.strip()
         except Exception as e:
             logger.warning(f"OpenAI chat completion failed, falling back to local synthesizer: {e}")
-    reply = f"Fail to find revalant informations. Please try again"
+
+    sources_summary = "\n".join(f"- Document: {c.document.title} (Page {c.page_number or 1}): {c.content}" for c in top_chunks)
+    reply = f"Based on the relevant documents:\n\n{sources_summary}"
     return reply
