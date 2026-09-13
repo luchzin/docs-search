@@ -1,11 +1,28 @@
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap");
 
+@font-face {
+  font-family: "Nokora";
+  src: url("./assets/Nokora-Regular.ttf") format("truetype");
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nokora";
+  src: url("./assets/Nokora-Bold.ttf") format("truetype");
+  font-weight: 600 700 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
+  --font-sans: "Nokora", "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

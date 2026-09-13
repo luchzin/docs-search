@@ -22,11 +22,16 @@ import {
   Trash2,
   Loader2,
   Save,
+  LogOut,
+  User,
+  LogIn,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import AuthModal from "@/components/auth/AuthModal.vue";
 import {
   Card,
   CardContent,
@@ -42,6 +47,7 @@ import {
   type ModelProvider,
 } from "@/stores/model";
 import { useChatStore } from "@/stores/chat";
+import { useAuthStore } from "@/stores/auth";
 import { setLanguage, type SupportedLocale } from "@/i18n";
 
 const emit = defineEmits<{
@@ -51,9 +57,11 @@ const emit = defineEmits<{
 const { t, locale } = useI18n();
 const modelStore = useModelStore();
 const chatStore = useChatStore();
+const authStore = useAuthStore();
 const isDark = useDark();
+const isAuthModalOpen = ref(false);
 
-type SettingsTab = "model" | "appearance" | "language" | "data";
+type SettingsTab = "account" | "model" | "appearance" | "language" | "data";
 const activeTab = ref<SettingsTab>("model");
 
 const localApiKey = ref(modelStore.currentApiKey);
@@ -129,6 +137,7 @@ function changeLanguage(lang: SupportedLocale) {
 </script>
 
 <template>
+  <AuthModal v-model:open="isAuthModalOpen" />
   <div class="h-full overflow-y-auto bg-background p-4 sm:p-6 md:p-8">
     <div class="mx-auto max-w-5xl space-y-6">
       <!-- Top Header Bar -->
@@ -162,6 +171,20 @@ function changeLanguage(lang: SupportedLocale) {
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
         <!-- Settings Sidebar / Tab Menu -->
         <nav class="flex md:flex-col gap-1.5 overflow-x-auto pb-2 md:pb-0 border-b md:border-b-0 shrink-0">
+          <button
+            type="button"
+            :class="[
+              'flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 text-xs font-medium transition-all text-left cursor-pointer whitespace-nowrap',
+              activeTab === 'account'
+                ? 'bg-primary/10 text-primary font-semibold shadow-2xs'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+            ]"
+            @click="activeTab = 'account'"
+          >
+            <User class="h-4 w-4 shrink-0" />
+            <span>{{ $t('settings.accountTab') }}</span>
+          </button>
+
           <button
             type="button"
             :class="[
@@ -221,8 +244,75 @@ function changeLanguage(lang: SupportedLocale) {
 
         <!-- Main Content Area -->
         <div class="md:col-span-3 space-y-6">
+          <!-- TAB: Account & Session -->
+          <div v-if="activeTab === 'account'" class="space-y-6">
+            <Card class="border shadow-2xs">
+              <CardHeader class="pb-3 border-b">
+                <div class="flex items-center gap-2">
+                  <User class="h-5 w-5 text-primary" />
+                  <CardTitle class="text-lg">{{ $t('settings.userAccount') }}</CardTitle>
+                </div>
+                <CardDescription class="text-xs">
+                  Manage your active login session and account details.
+                </CardDescription>
+              </CardHeader>
+              <CardContent class="pt-4 space-y-4">
+                <template v-if="authStore.isAuthenticated && authStore.user">
+                  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-xl border p-4 gap-4">
+                    <div class="flex items-center gap-3">
+                      <Avatar class="h-10 w-10">
+                        <AvatarFallback class="text-sm uppercase bg-primary/10 text-primary font-bold">
+                          {{ (authStore.user.username || authStore.user.email || "U").slice(0, 2) }}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p class="text-sm font-semibold text-foreground">
+                          {{ authStore.user.username || authStore.user.email }}
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                          {{ authStore.user.email }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      class="gap-2 shrink-0 font-semibold"
+                      @click="authStore.logout()"
+                    >
+                      <LogOut class="h-4 w-4" />
+                      <span>{{ $t('settings.logoutBtn') }}</span>
+                    </Button>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-xl border p-4 gap-4">
+                    <div class="space-y-0.5">
+                      <p class="text-sm font-semibold text-foreground">
+                        {{ $t('settings.notLoggedIn') }}
+                      </p>
+                      <p class="text-xs text-muted-foreground">
+                        Sign in to sync your document chats and custom settings.
+                      </p>
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      class="gap-2 shrink-0 font-semibold"
+                      @click="isAuthModalOpen = true"
+                    >
+                      <LogIn class="h-4 w-4" />
+                      <span>{{ $t('header.signInRegister') }}</span>
+                    </Button>
+                  </div>
+                </template>
+              </CardContent>
+            </Card>
+          </div>
+
           <!-- TAB 1: AI Model & Single Active API Key -->
-          <div v-if="activeTab === 'model'" class="space-y-6">
+          <div v-else-if="activeTab === 'model'" class="space-y-6">
             <!-- Model Selection Cards Grid -->
             <Card class="border shadow-2xs">
               <CardHeader class="pb-3 border-b">

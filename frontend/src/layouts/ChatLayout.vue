@@ -14,7 +14,6 @@ import {
   Sun,
   PanelLeftOpen,
   PanelLeftClose,
-  LogOut,
   LogIn,
   Download,
   Languages,
@@ -146,16 +145,6 @@ function download() {
                 >
                   {{ authStore.user.username || authStore.user.email }}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
-                  @click="authStore.logout()"
-                  :title="$t('header.logout')"
-                >
-                  <LogOut class="h-3.5 w-3.5" />
-                  <span class="hidden sm:inline">{{ $t('header.logout') }}</span>
-                </Button>
               </div>
             </template>
             <template v-else>
