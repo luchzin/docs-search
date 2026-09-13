@@ -42,7 +42,7 @@ function onKeydown(event: KeyboardEvent) {
       <Textarea
         v-model="input"
         rows="1"
-        placeholder="Ask a question about your documents..."
+        :placeholder="$t('chat.inputPlaceholder')"
         class="max-h-36 sm:max-h-40 min-h-10 sm:min-h-11 resize-none border-0 bg-transparent py-2 text-sm shadow-none focus-visible:ring-0"
         :disabled="chatStore.isLoading"
         @keydown="onKeydown"
@@ -56,12 +56,12 @@ function onKeydown(event: KeyboardEvent) {
         @click="submit"
       >
         <ArrowUp class="size-4" />
-        <span class="sr-only">Send message</span>
+        <span class="sr-only">{{ $t('chat.sendMessage') }}</span>
       </Button>
     </div>
 
     <p class="mt-2 text-center text-[11px] sm:text-xs text-muted-foreground">
-      Answers are generated from your uploaded PDF documents
+      {{ $t('chat.answersNotice') }}
     </p>
   </div>
 </template>

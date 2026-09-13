@@ -35,7 +35,7 @@ defineProps<{
 
     <div class="min-w-0 flex-1 space-y-1">
       <p class="text-xs sm:text-sm font-medium">
-        {{ message.role === "assistant" ? "Assistant" : "You" }}
+        {{ message.role === "assistant" ? $t('chat.assistantRole') : $t('chat.userRole') }}
       </p>
       <p class="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 wrap-break-word">
         {{ message.content }}

@@ -65,10 +65,10 @@ function openFilePicker() {
     >
       <Upload class="size-5 text-muted-foreground" />
       <div class="space-y-1">
-        <p class="text-sm font-medium">Drop PDF here</p>
-        <p class="text-xs text-muted-foreground">or click to browse</p>
+        <p class="text-sm font-medium">{{ $t('docs.dropzoneTitle') }}</p>
+        <p class="text-xs text-muted-foreground">{{ $t('docs.dropzoneSub') }}</p>
       </div>
-      <Badge variant="secondary" class="text-[11px] sm:text-xs">PDF only</Badge>
+      <Badge variant="secondary" class="text-[11px] sm:text-xs">{{ $t('docs.pdfOnly') }}</Badge>
     </div>
 
     <input
@@ -111,7 +111,7 @@ function openFilePicker() {
             variant="secondary"
             class="mt-1 text-[11px] sm:text-xs"
           >
-            Ready
+            {{ $t('docs.ready') }}
           </Badge>
         </div>
         <Button
@@ -121,7 +121,7 @@ function openFilePicker() {
           @click.stop="documentsStore.removeDocument(doc.id)"
         >
           <X class="size-3.5" />
-          <span class="sr-only">Remove {{ doc.name }}</span>
+          <span class="sr-only">{{ $t('docs.remove') }} {{ doc.name }}</span>
         </Button>
       </li>
     </ul>

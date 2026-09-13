@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watchEffect, onMounted, watch } from "vue";
 import { useDark } from "@vueuse/core";
+import { useI18n } from "vue-i18n";
 import AppSidebar from "@/components/chat/AppSidebar.vue";
 import ChatInput from "@/components/chat/ChatInput.vue";
 import MessageList from "@/components/chat/MessageList.vue";
@@ -16,11 +17,14 @@ import {
   LogOut,
   LogIn,
   Download,
+  Languages,
 } from "@lucide/vue";
 import AuthModal from "@/components/auth/AuthModal.vue";
 import { useAuthStore } from "../stores/auth";
 import { useChatStore } from "../stores/chat";
+import { setLanguage, type SupportedLocale } from "@/i18n";
 
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const chatStore = useChatStore();
 
@@ -33,13 +37,19 @@ const isDark = useDark();
 
 const pageTitle = computed(() => {
   if (activeView.value === "settings") {
-    return "Settings & Configuration - Doc Search";
+    return `${t('header.settingsTitle')} - ${t('common.appName')}`;
   }
   if (chatStore.activeChat?.title) {
-    return `${chatStore.activeChat.title} - Doc Search`;
+    return `${chatStore.activeChat.title} - ${t('common.appName')}`;
   }
-  return "RAG Document Chat - Doc Search";
+  return `${t('header.title')} - ${t('common.appName')}`;
 });
+
+function toggleLanguage() {
+  const nextLocale: SupportedLocale = locale.value === "en" ? "km" : "en";
+  setLanguage(nextLocale);
+}
+
 
 watchEffect(() => {
   document.title = pageTitle.value;
@@ -99,15 +109,15 @@ function download() {
             >
               <PanelLeftClose v-if="sidebarOpen" class="size-4" />
               <PanelLeftOpen v-else class="size-4" />
-              <span class="sr-only">Toggle sidebar</span>
+              <span class="sr-only">{{ $t('header.toggleSidebar') }}</span>
             </Button>
             <h2
               class="text-sm font-semibold text-foreground truncate max-w-45 sm:max-w-xs md:max-w-sm"
             >
               {{
                 activeView === "settings"
-                  ? "Settings & Configuration"
-                  : chatStore.activeChat?.title || "RAG Document Chat"
+                  ? $t('header.settingsTitle')
+                  : chatStore.activeChat?.title || $t('header.title')
               }}
             </h2>
           </div>
@@ -141,10 +151,10 @@ function download() {
                   size="sm"
                   class="h-8 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
                   @click="authStore.logout()"
-                  title="Sign Out"
+                  :title="$t('header.logout')"
                 >
                   <LogOut class="h-3.5 w-3.5" />
-                  <span class="hidden sm:inline">Logout</span>
+                  <span class="hidden sm:inline">{{ $t('header.logout') }}</span>
                 </Button>
               </div>
             </template>
@@ -156,9 +166,21 @@ function download() {
                 @click="isAuthModalOpen = true"
               >
                 <LogIn class="h-3.5 w-3.5" />
-                Sign In / Register
+                {{ $t('header.signInRegister') }}
               </Button>
             </template>
+
+            <!-- Language Switcher Toggle -->
+            <Button
+              variant="ghost"
+              size="sm"
+              class="h-8 px-2 text-xs font-semibold gap-1 text-muted-foreground hover:text-foreground border border-border/60"
+              @click="toggleLanguage"
+              :title="$t('settings.selectLanguage')"
+            >
+              <Languages class="h-3.5 w-3.5" />
+              <span>{{ locale === 'en' ? 'EN' : 'KM' }}</span>
+            </Button>
 
             <!-- Theme Toggle -->
             <Button
@@ -169,7 +191,7 @@ function download() {
             >
               <Sun v-if="isDark" class="h-4 w-4" />
               <MoonStar v-else class="h-4 w-4" />
-              <span class="sr-only">Toggle dark mode</span>
+              <span class="sr-only">{{ $t('header.toggleDarkMode') }}</span>
             </Button>
 
             <!-- Download button -->
@@ -178,7 +200,7 @@ function download() {
               size="icon"
               class="h-8 w-8 px-0"
               @click="download"
-              title="Download Application"
+              :title="$t('header.downloadApp')"
             >
               <Download class="h-4 w-4" />
             </Button>

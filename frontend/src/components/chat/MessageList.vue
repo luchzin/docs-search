@@ -60,9 +60,9 @@ watch(
           <Sparkles class="size-6 text-primary" />
         </div>
         <div class="max-w-md space-y-2">
-          <h2 class="text-xl font-semibold">Ask questions about your documents</h2>
+          <h2 class="text-xl font-semibold">{{ $t('chat.welcomeTitle') }}</h2>
           <p class="text-sm text-muted-foreground">
-            Upload PDF support documents in the sidebar, then ask anything related to their content.
+            {{ $t('chat.welcomeSub') }}
           </p>
         </div>
         <div
@@ -70,7 +70,7 @@ watch(
           class="flex items-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground"
         >
           <FileText class="size-4" />
-          Start by uploading a PDF in the sidebar
+          {{ $t('chat.startUploadNotice') }}
         </div>
       </div>
 
@@ -111,11 +111,11 @@ watch(
         variant="outline"
         size="icon"
         class="absolute bottom-4 right-6 z-30 h-9 w-9 rounded-full bg-background/90 shadow-md border backdrop-blur-xs hover:bg-accent text-foreground cursor-pointer transition-all"
-        title="Scroll to latest message"
+        :title="$t('chat.jumpToLatest')"
         @click="scrollToBottom(true)"
       >
         <ArrowDown class="h-4 w-4 text-primary" />
-        <span class="sr-only">Jump to latest message</span>
+        <span class="sr-only">{{ $t('chat.jumpToLatest') }}</span>
       </Button>
     </Transition>
   </div>

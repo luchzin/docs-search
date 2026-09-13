@@ -61,9 +61,9 @@ async function handleRegister() {
   <Dialog v-model:open="isOpen">
     <DialogContent class="sm:max-w-106.25">
       <DialogHeader>
-        <DialogTitle class="text-xl font-bold">Authentication Required</DialogTitle>
+        <DialogTitle class="text-xl font-bold">{{ $t('auth.title') }}</DialogTitle>
         <DialogDescription class="text-xs text-muted-foreground">
-          Please sign in or create an account to access chats, documents, and model settings.
+          {{ $t('auth.description') }}
         </DialogDescription>
       </DialogHeader>
 
@@ -77,15 +77,15 @@ async function handleRegister() {
 
       <Tabs default-value="login" class="w-full mt-2">
         <TabsList class="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="login">Login</TabsTrigger>
-          <TabsTrigger value="register">Register</TabsTrigger>
+          <TabsTrigger value="login">{{ $t('auth.login') }}</TabsTrigger>
+          <TabsTrigger value="register">{{ $t('auth.register') }}</TabsTrigger>
         </TabsList>
 
         <!-- LOGIN TAB -->
         <TabsContent value="login">
           <form @submit.prevent="handleLogin" class="space-y-4">
             <div class="space-y-2">
-              <Label for="modal-login-email">Email</Label>
+              <Label for="modal-login-email">{{ $t('auth.email') }}</Label>
               <div class="relative">
                 <Mail class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -99,7 +99,7 @@ async function handleRegister() {
               </div>
             </div>
             <div class="space-y-2">
-              <Label for="modal-login-password">Password</Label>
+              <Label for="modal-login-password">{{ $t('auth.password') }}</Label>
               <div class="relative">
                 <Lock class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -114,7 +114,7 @@ async function handleRegister() {
             <div class="pt-2">
               <Button type="submit" class="w-full font-semibold" :disabled="authStore.isLoading">
                 <Loader2 v-if="authStore.isLoading" class="mr-2 h-4 w-4 animate-spin" />
-                Sign In
+                {{ $t('auth.signIn') }}
               </Button>
             </div>
           </form>
@@ -124,7 +124,7 @@ async function handleRegister() {
         <TabsContent value="register">
           <form @submit.prevent="handleRegister" class="space-y-4">
             <div class="space-y-2">
-              <Label for="modal-reg-name">Full Name</Label>
+              <Label for="modal-reg-name">{{ $t('auth.fullName') }}</Label>
               <div class="relative">
                 <UserIcon class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -137,7 +137,7 @@ async function handleRegister() {
               </div>
             </div>
             <div class="space-y-2">
-              <Label for="modal-reg-email">Email</Label>
+              <Label for="modal-reg-email">{{ $t('auth.email') }}</Label>
               <div class="relative">
                 <Mail class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -151,7 +151,7 @@ async function handleRegister() {
               </div>
             </div>
             <div class="space-y-2">
-              <Label for="modal-reg-password">Password</Label>
+              <Label for="modal-reg-password">{{ $t('auth.password') }}</Label>
               <div class="relative">
                 <Lock class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -166,7 +166,7 @@ async function handleRegister() {
             <div class="pt-2">
               <Button type="submit" class="w-full font-semibold" :disabled="authStore.isLoading">
                 <Loader2 v-if="authStore.isLoading" class="mr-2 h-4 w-4 animate-spin" />
-                Create Account
+                {{ $t('auth.createAccount') }}
               </Button>
             </div>
           </form>

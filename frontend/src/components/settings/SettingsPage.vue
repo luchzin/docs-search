@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   Sparkles,
   Bot,
@@ -14,6 +15,7 @@ import {
   Settings,
   Cpu,
   Palette,
+  Languages,
   Database,
   Sun,
   MoonStar,
@@ -40,16 +42,18 @@ import {
   type ModelProvider,
 } from "@/stores/model";
 import { useChatStore } from "@/stores/chat";
+import { setLanguage, type SupportedLocale } from "@/i18n";
 
 const emit = defineEmits<{
   backToChat: [];
 }>();
 
+const { t, locale } = useI18n();
 const modelStore = useModelStore();
 const chatStore = useChatStore();
 const isDark = useDark();
 
-type SettingsTab = "model" | "appearance" | "data";
+type SettingsTab = "model" | "appearance" | "language" | "data";
 const activeTab = ref<SettingsTab>("model");
 
 const localApiKey = ref(modelStore.currentApiKey);
@@ -97,9 +101,8 @@ async function handleUploadApiKey() {
   uploadStatusMessage.value = null;
 
   try {
-    // Custom upload implementation call for user backend logic
     await uploadApiKey(modelStore.selectedModel.provider, localApiKey.value);
-    uploadStatusMessage.value = `API key for ${modelStore.selectedModel.providerName} saved successfully!`;
+    uploadStatusMessage.value = t("settings.keySavedSuccess", { provider: modelStore.selectedModel.providerName });
   } catch (err: any) {
     console.error("API Key upload error:", err);
     uploadStatusMessage.value = `Error uploading key: ${err?.message || err}`;
@@ -108,22 +111,20 @@ async function handleUploadApiKey() {
   }
 }
 
-/**
- * Placeholder function for user's custom backend API key upload implementation.
- * You can implement your own API request logic inside this function.
- */
 async function uploadApiKey(provider: ModelProvider, apiKey: string): Promise<void> {
   console.log(`[Custom API Key Upload] Provider: ${provider}, Key: ${apiKey ? 'Present' : 'Empty'}`);
-  // Implement your custom backend upload request here:
-  // await api.post('/user/api-key/', { provider, api_key: apiKey });
 }
 
 function handleClearAllData() {
-  if (confirm("Are you sure you want to clear all local chat history and documents?")) {
+  if (confirm(t("settings.confirmClearStorage"))) {
     chatStore.clearMessages();
     localStorage.clear();
     location.reload();
   }
+}
+
+function changeLanguage(lang: SupportedLocale) {
+  setLanguage(lang);
 }
 </script>
 
@@ -138,11 +139,11 @@ function handleClearAllData() {
               <Settings class="h-5 w-5" />
             </div>
             <h1 class="text-2xl font-bold tracking-tight text-foreground">
-              Application Settings
+              {{ $t('settings.title') }}
             </h1>
           </div>
           <p class="text-sm text-muted-foreground">
-            Configure your active AI model, API key credentials, appearance, and workspace data.
+            {{ $t('settings.subtitle') }}
           </p>
         </div>
 
@@ -153,7 +154,7 @@ function handleClearAllData() {
           @click="emit('backToChat')"
         >
           <ArrowLeft class="h-4 w-4" />
-          <span>Back to Chat</span>
+          <span>{{ $t('settings.backToChat') }}</span>
         </Button>
       </div>
 
@@ -172,7 +173,7 @@ function handleClearAllData() {
             @click="activeTab = 'model'"
           >
             <Cpu class="h-4 w-4 shrink-0" />
-            <span>AI Model & Key</span>
+            <span>{{ $t('settings.modelTab') }}</span>
           </button>
 
           <button
@@ -186,7 +187,21 @@ function handleClearAllData() {
             @click="activeTab = 'appearance'"
           >
             <Palette class="h-4 w-4 shrink-0" />
-            <span>Appearance</span>
+            <span>{{ $t('settings.appearanceTab') }}</span>
+          </button>
+
+          <button
+            type="button"
+            :class="[
+              'flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 text-xs font-medium transition-all text-left cursor-pointer whitespace-nowrap',
+              activeTab === 'language'
+                ? 'bg-primary/10 text-primary font-semibold shadow-2xs'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+            ]"
+            @click="activeTab = 'language'"
+          >
+            <Languages class="h-4 w-4 shrink-0" />
+            <span>{{ $t('settings.languageTab') }}</span>
           </button>
 
           <button
@@ -200,7 +215,7 @@ function handleClearAllData() {
             @click="activeTab = 'data'"
           >
             <Database class="h-4 w-4 shrink-0" />
-            <span>Data & Storage</span>
+            <span>{{ $t('settings.dataTab') }}</span>
           </button>
         </nav>
 
@@ -214,14 +229,14 @@ function handleClearAllData() {
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <Sparkles class="h-5 w-5 text-primary" />
-                    <CardTitle class="text-lg">Select AI Model</CardTitle>
+                    <CardTitle class="text-lg">{{ $t('settings.selectModel') }}</CardTitle>
                   </div>
                   <Badge variant="outline" class="text-xs font-medium">
-                    Active: {{ modelStore.selectedModel.name }}
+                    {{ $t('settings.active') }}: {{ modelStore.selectedModel.name }}
                   </Badge>
                 </div>
                 <CardDescription class="text-xs mt-1">
-                  Select one active model to handle chat & document search queries. Google Gemini is set as default.
+                  {{ $t('settings.modelSub') }}
                 </CardDescription>
               </CardHeader>
               <CardContent class="pt-4 space-y-4">
@@ -285,11 +300,11 @@ function handleClearAllData() {
                 <div class="flex items-center gap-2">
                   <Key class="h-5 w-5 text-primary" />
                   <CardTitle class="text-lg">
-                    API Key for {{ modelStore.selectedModel.providerName }}
+                    {{ $t('settings.apiKeyFor', { provider: modelStore.selectedModel.providerName }) }}
                   </CardTitle>
                 </div>
                 <CardDescription class="text-xs mt-1">
-                  Set the API key for your currently selected model (<strong>{{ modelStore.selectedModel.name }}</strong>).
+                  {{ $t('settings.apiKeySub', { model: modelStore.selectedModel.name }) }}
                 </CardDescription>
               </CardHeader>
               <CardContent class="pt-4">
@@ -300,10 +315,10 @@ function handleClearAllData() {
                       <span>{{ modelStore.selectedModel.providerName }} API Key</span>
                     </Label>
                     <span v-if="modelStore.currentApiKey" class="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                      <ShieldCheck class="h-3.5 w-3.5" /> Key Set ✓
+                      <ShieldCheck class="h-3.5 w-3.5" /> {{ $t('settings.keySet') }}
                     </span>
                     <Badge v-else variant="outline" class="text-[10px] text-muted-foreground font-normal">
-                      Optional / Required
+                      {{ $t('settings.optionalRequired') }}
                     </Badge>
                   </div>
 
@@ -312,7 +327,7 @@ function handleClearAllData() {
                       id="active-api-key"
                       v-model="localApiKey"
                       :type="showApiKey ? 'text' : 'password'"
-                      :placeholder="`Enter ${modelStore.selectedModel.providerName} API key...`"
+                      :placeholder="$t('settings.enterKeyPlaceholder', { provider: modelStore.selectedModel.providerName })"
                       class="pr-10 text-xs h-9.5"
                       @blur="saveKey"
                       @keyup.enter="saveKey"
@@ -332,10 +347,10 @@ function handleClearAllData() {
                   <div class="flex items-center justify-between text-[11px] text-muted-foreground">
                     <span class="flex items-center gap-1">
                       <ShieldCheck class="h-3 w-3 text-emerald-500" />
-                      Saved locally in browser
+                      {{ $t('settings.apiKeySavedLocally') }}
                     </span>
                     <span v-if="modelStore.currentApiKey" class="text-emerald-600 font-medium">
-                      Active Key Saved
+                      {{ $t('settings.activeKeySaved') }}
                     </span>
                   </div>
 
@@ -345,7 +360,7 @@ function handleClearAllData() {
                       {{ uploadStatusMessage }}
                     </p>
                     <p v-else class="text-[11px] text-muted-foreground">
-                      Click below to submit and upload API key for {{ modelStore.selectedModel.providerName }}.
+                      {{ $t('settings.submitNotice', { provider: modelStore.selectedModel.providerName }) }}
                     </p>
                     <Button
                       type="button"
@@ -356,7 +371,7 @@ function handleClearAllData() {
                     >
                       <Loader2 v-if="isUploadingKey" class="h-3.5 w-3.5 animate-spin" />
                       <Save v-else class="h-3.5 w-3.5" />
-                      <span>Save & Submit API Key</span>
+                      <span>{{ $t('settings.saveApiKeyBtn') }}</span>
                     </Button>
                   </div>
                 </div>
@@ -370,53 +385,121 @@ function handleClearAllData() {
               <CardHeader class="pb-3 border-b">
                 <div class="flex items-center gap-2">
                   <Palette class="h-5 w-5 text-primary" />
-                  <CardTitle class="text-lg">Appearance & Theme</CardTitle>
+                  <CardTitle class="text-lg">{{ $t('settings.appearanceTab') }}</CardTitle>
                 </div>
                 <CardDescription class="text-xs">
-                  Customize the look and feel of your application interface.
+                  {{ $t('settings.colorThemeSub') }}
                 </CardDescription>
               </CardHeader>
               <CardContent class="pt-4 space-y-4">
                 <div class="flex items-center justify-between rounded-xl border p-4">
                   <div class="space-y-0.5">
-                    <span class="text-sm font-semibold">Color Theme</span>
+                    <span class="text-sm font-semibold">{{ $t('settings.colorTheme') }}</span>
                     <p class="text-xs text-muted-foreground">
-                      Switch between Light mode and Dark mode interface.
+                      {{ $t('settings.colorThemeSub') }}
                     </p>
                   </div>
                   <Button variant="outline" size="sm" class="gap-2" @click="isDark = !isDark">
                     <Sun v-if="isDark" class="h-4 w-4" />
                     <MoonStar v-else class="h-4 w-4" />
-                    <span>{{ isDark ? "Dark Mode" : "Light Mode" }}</span>
+                    <span>{{ isDark ? $t('settings.darkMode') : $t('settings.lightMode') }}</span>
                   </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <!-- TAB 3: Data & Storage -->
+          <!-- TAB 3: Language -->
+          <div v-else-if="activeTab === 'language'" class="space-y-6">
+            <Card class="border shadow-2xs">
+              <CardHeader class="pb-3 border-b">
+                <div class="flex items-center gap-2">
+                  <Languages class="h-5 w-5 text-primary" />
+                  <CardTitle class="text-lg">{{ $t('settings.selectLanguage') }}</CardTitle>
+                </div>
+                <CardDescription class="text-xs">
+                  {{ $t('settings.selectLanguageSub') }}
+                </CardDescription>
+              </CardHeader>
+              <CardContent class="pt-4 space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <!-- English option -->
+                  <div
+                    :class="[
+                      'flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all select-none',
+                      locale === 'en'
+                        ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30'
+                        : 'border-border hover:border-muted-foreground/40 hover:bg-muted/30'
+                    ]"
+                    @click="changeLanguage('en')"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-lg">🇬🇧</span>
+                      <div>
+                        <p class="text-sm font-semibold text-foreground">English</p>
+                        <p class="text-xs text-muted-foreground">English (អង់គ្លេស)</p>
+                      </div>
+                    </div>
+                    <div
+                      v-if="locale === 'en'"
+                      class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                    >
+                      <Check class="h-3 w-3" />
+                    </div>
+                  </div>
+
+                  <!-- Khmer option -->
+                  <div
+                    :class="[
+                      'flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all select-none',
+                      locale === 'km'
+                        ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30'
+                        : 'border-border hover:border-muted-foreground/40 hover:bg-muted/30'
+                    ]"
+                    @click="changeLanguage('km')"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-lg">🇰🇭</span>
+                      <div>
+                        <p class="text-sm font-semibold text-foreground">ភាសាខ្មែរ</p>
+                        <p class="text-xs text-muted-foreground">Khmer (ភាសាខ្មែរ)</p>
+                      </div>
+                    </div>
+                    <div
+                      v-if="locale === 'km'"
+                      class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                    >
+                      <Check class="h-3 w-3" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <!-- TAB 4: Data & Storage -->
           <div v-else-if="activeTab === 'data'" class="space-y-6">
             <Card class="border shadow-2xs border-destructive/20">
               <CardHeader class="pb-3 border-b border-destructive/10">
                 <div class="flex items-center gap-2">
                   <Database class="h-5 w-5 text-destructive" />
-                  <CardTitle class="text-lg text-destructive">Data & Storage Management</CardTitle>
+                  <CardTitle class="text-lg text-destructive">{{ $t('settings.dataTab') }}</CardTitle>
                 </div>
                 <CardDescription class="text-xs">
-                  Manage local browser storage, cached chats, and uploaded document references.
+                  {{ $t('settings.clearStorageSub') }}
                 </CardDescription>
               </CardHeader>
               <CardContent class="pt-4 space-y-4">
                 <div class="flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/5 p-4">
                   <div class="space-y-0.5">
-                    <span class="text-sm font-semibold text-destructive">Clear Local Application Storage</span>
+                    <span class="text-sm font-semibold text-destructive">{{ $t('settings.clearStorage') }}</span>
                     <p class="text-xs text-muted-foreground">
-                      This will reset locally stored chat history, model preferences, and API keys.
+                      {{ $t('settings.clearStorageSub') }}
                     </p>
                   </div>
                   <Button variant="destructive" size="sm" class="gap-1.5" @click="handleClearAllData">
                     <Trash2 class="h-4 w-4" />
-                    <span>Clear Storage</span>
+                    <span>{{ $t('settings.clearStorageBtn') }}</span>
                   </Button>
                 </div>
               </CardContent>

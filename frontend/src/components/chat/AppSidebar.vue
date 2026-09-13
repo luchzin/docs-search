@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from "vue"
+import { useI18n } from "vue-i18n"
 import {
   MessageSquarePlus,
   PanelLeftClose,
@@ -19,6 +20,8 @@ import { useDocumentsStore } from "@/stores/documents"
 import { useModelStore } from "@/stores/model"
 import type { Chat } from "@/types"
 import DocumentDropzone from "./DocumentDropzone.vue"
+
+const { t } = useI18n()
 
 defineProps<{
   open: boolean
@@ -74,10 +77,10 @@ const chatGroups = computed<ChatGroup[]>(() => {
   }
 
   const groups: ChatGroup[] = []
-  if (today.length > 0) groups.push({ label: "Today", chats: today })
-  if (yesterday.length > 0) groups.push({ label: "Yesterday", chats: yesterday })
-  if (previous7Days.length > 0) groups.push({ label: "Previous 7 Days", chats: previous7Days })
-  if (older.length > 0) groups.push({ label: "Older", chats: older })
+  if (today.length > 0) groups.push({ label: t("sidebar.today"), chats: today })
+  if (yesterday.length > 0) groups.push({ label: t("sidebar.yesterday"), chats: yesterday })
+  if (previous7Days.length > 0) groups.push({ label: t("sidebar.previous7Days"), chats: previous7Days })
+  if (older.length > 0) groups.push({ label: t("sidebar.older"), chats: older })
 
   return groups
 })
@@ -151,11 +154,11 @@ function handleDeleteChat(id: string, e: Event) {
         <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary text-secondary-foreground font-bold shadow-2xs">
           <MessageSquare class="size-4" />
         </div>
-        <h1 class="truncate text-sm font-bold">Doc Chat</h1>
+        <h1 class="truncate text-sm font-bold">{{ $t('sidebar.title') }}</h1>
       </div>
       <Button variant="ghost" size="icon-sm" @click="emit('toggle')">
         <PanelLeftClose class="size-4" />
-        <span class="sr-only">Close sidebar</span>
+        <span class="sr-only">{{ $t('header.toggleSidebar') }}</span>
       </Button>
     </div>
 
@@ -175,7 +178,7 @@ function handleDeleteChat(id: string, e: Event) {
           @click="activeTab = 'chats'"
         >
           <MessageSquare class="size-3.5" />
-          <span>Chats</span>
+          <span>{{ $t('sidebar.chats') }}</span>
           <span
             v-if="chatStore.chats.length"
             class="ml-0.5 rounded-full bg-black/10 dark:bg-black/20 px-1.5 py-0.2 text-[10px] font-bold"
@@ -197,7 +200,7 @@ function handleDeleteChat(id: string, e: Event) {
           @click="activeTab = 'docs'"
         >
           <FileText class="size-3.5" />
-          <span>Docs</span>
+          <span>{{ $t('sidebar.docs') }}</span>
           <span
             v-if="documentsStore.documents.length"
             class="ml-0.5 rounded-full bg-black/10 dark:bg-black/20 px-1.5 py-0.2 text-[10px] font-bold"
@@ -217,13 +220,13 @@ function handleDeleteChat(id: string, e: Event) {
           @click="handleNewChat"
         >
           <MessageSquarePlus class="size-4" />
-          <span>New chat</span>
+          <span>{{ $t('sidebar.newChat') }}</span>
         </Button>
       </div>
 
       <div class="flex-1 overflow-y-auto px-3 py-2 space-y-3">
         <div v-if="!chatStore.chats.length" class="px-2 py-4 text-xs text-muted-foreground text-center rounded-md border border-dashed">
-          No chats yet. Start a new chat above!
+          {{ $t('sidebar.noChats') }}
         </div>
 
         <div v-else class="space-y-3">
@@ -286,7 +289,7 @@ function handleDeleteChat(id: string, e: Event) {
                     variant="ghost"
                     size="icon"
                     class="h-6 w-6 text-muted-foreground hover:text-foreground"
-                    title="Rename chat"
+                    :title="$t('sidebar.renameChat')"
                     @click="startRenaming(chat, $event)"
                   >
                     <Pencil class="size-3" />
@@ -295,7 +298,7 @@ function handleDeleteChat(id: string, e: Event) {
                     variant="ghost"
                     size="icon"
                     class="h-6 w-6 text-muted-foreground hover:text-destructive"
-                    title="Delete chat"
+                    :title="$t('sidebar.deleteChat')"
                     @click="handleDeleteChat(chat.id, $event)"
                   >
                     <Trash2 class="size-3" />
@@ -329,7 +332,7 @@ function handleDeleteChat(id: string, e: Event) {
       >
         <div class="flex items-center gap-2">
           <Settings class="size-4 opacity-80" />
-          <span>Settings</span>
+          <span>{{ $t('common.settings') }}</span>
         </div>
         <span class="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono truncate max-w-24">
           {{ modelStore.selectedModel.name }}
