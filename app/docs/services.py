@@ -2,10 +2,11 @@ import os
 import math
 import hashlib
 import logging
-import requests
 from django.conf import settings
 from pgvector.django import CosineDistance
 from .models import Document, DocumentChunk
+from app.chat.ai_services.factory import LLMFactory
+from app.chat.ai_services.base import QuotaExhaustedError, LLMProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -13,17 +14,6 @@ try:
     import pypdf
 except ImportError:
     pypdf = None
-
-try:
-    from google import genai
-    from google.genai import types
-except ImportError:
-    genai = None
-
-try:
-    import openai
-except ImportError:
-    openai = None
 
 
 def get_gemini_api_key() -> str | None:
@@ -64,62 +54,19 @@ def _generate_deterministic_embedding(text: str, dim: int = 1536) -> list[float]
     return vec
 
 
-def get_embedding(text: str, api_key: str | None = None) -> list[float]:
-    """Generates 1536-dimensional vector embedding using Gemini API, OpenAI API, or fallback."""
-    gemini_key = api_key or get_gemini_api_key()
-    if gemini_key:
+def get_embedding(text: str, model_name: str | None = None, api_key: str | None = None) -> list[float]:
+    """Generates 1536-dimensional vector embedding using the configured modular LLM provider."""
+    try:
+        provider = LLMFactory.get_provider(model_name)
+        return provider.get_embedding(text, api_key=api_key)
+    except Exception as e:
+        logger.debug(f"Selected provider get_embedding failed ({e}); trying Gemini system default embedding.")
         try:
-            if genai:
-                client = genai.Client(api_key=gemini_key)
-                for embed_model in ["gemini-embedding-001", "gemini-embedding-2", "text-embedding-004"]:
-                    try:
-                        res = client.models.embed_content(
-                            model=embed_model,
-                            contents=text,
-                            config=types.EmbedContentConfig(output_dimensionality=1536),
-                        )
-                        if res:
-                            vals = None
-                            if hasattr(res, "embeddings") and res.embeddings:
-                                vals = res.embeddings[0].values
-                            elif hasattr(res, "embedding") and res.embedding:
-                                vals = getattr(res.embedding, "values", None)
-                            if vals:
-                                return list(vals)
-                    except Exception as e:
-                        logger.debug(f"Gemini embed_content with {embed_model} failed: {e}")
-
-            # REST fallback for Gemini Embeddings API
-            for embed_model in ["gemini-embedding-001", "gemini-embedding-2", "text-embedding-004"]:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{embed_model}:embedContent?key={gemini_key}"
-                payload = {
-                    "model": f"models/{embed_model}",
-                    "content": {"parts": [{"text": text}]},
-                    "outputDimensionality": 1536,
-                }
-                resp = requests.post(url, json=payload, timeout=10)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    vals = data.get("embedding", {}).get("values")
-                    if vals:
-                        return list(vals)
-            logger.warning("Gemini embedding REST response non-200")
-        except Exception as e:
-            logger.warning(f"Gemini embedding API failed, checking OpenAI / fallback: {e}")
-
-    openai_key = getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY")
-    if openai_key and openai:
-        try:
-            client = openai.OpenAI(api_key=openai_key)
-            response = client.embeddings.create(
-                input=text,
-                model="text-embedding-3-small"
-            )
-            return response.data[0].embedding
-        except Exception as e:
-            logger.warning(f"OpenAI embedding API failed, falling back: {e}")
-
-    return _generate_deterministic_embedding(text, dim=1536)
+            from app.chat.ai_services.gemini_provider import GeminiProvider
+            return GeminiProvider(model_id="gemini-3.6-flash").get_embedding(text)
+        except Exception as ge:
+            logger.warning(f"Gemini fallback embedding failed ({ge}), using deterministic fallback.")
+            return _generate_deterministic_embedding(text, dim=1536)
 
 
 def extract_pages_from_pdf(file_path: str) -> list[tuple[int, str]]:
@@ -208,8 +155,9 @@ def process_and_store_document(document: Document) -> list[DocumentChunk]:
 
 
 def generate_rag_response(session, user_query: str, model_name: str | None = None, api_key: str | None = None) -> str:
-    """Executes RAG pipeline: embeds user query, searches pgvector, and generates response via Gemini/OpenAI/Synthesizer."""
-    query_embedding = get_embedding(user_query, api_key=api_key)
+    """Executes RAG pipeline: embeds user query, searches pgvector, and generates response via modular LLM provider."""
+    provider = LLMFactory.get_provider(model_name)
+    query_embedding = get_embedding(user_query, model_name=model_name, api_key=api_key)
 
     chunk_qs = DocumentChunk.objects.filter(document__session=session)
     if not chunk_qs.exists():
@@ -235,60 +183,16 @@ def generate_rag_response(session, user_query: str, model_name: str | None = Non
         f"User Question: {user_query}\nAnswer:"
     )
 
-    gemini_key = api_key or get_gemini_api_key()
-    target_gemini_model = model_name if (model_name and "gemini" in model_name) else "gemini-3.6-flash"
+    try:
+        return provider.generate_response(prompt, api_key=api_key)
+    except QuotaExhaustedError as qe:
+        logger.warning(f"Quota exhausted error for model '{model_name}': {qe}")
+        return f"⚠️ **API Quota / Token Error**\n\nYou have no API tokens or credits remaining for the selected model ({model_name or 'selected AI model'}). Please add credits to your API account or switch to the default **Google Gemini AI**."
+    except Exception as e:
+        err_text = str(e).lower()
+        if any(keyword in err_text for keyword in ["insufficient_quota", "credit_balance_exhausted", "quota", "credit", "429", "no credits"]):
+            logger.warning(f"Quota error detected for model '{model_name}': {e}")
+            return f"⚠️ **API Quota / Token Error**\n\nYou have no API tokens or credits remaining for the selected model ({model_name or 'selected AI model'}). Please add credits to your API account or switch to the default **Google Gemini AI**."
 
-    if gemini_key:
-        try:
-            if genai:
-                client = genai.Client(api_key=gemini_key)
-                for g_model in [target_gemini_model, "gemini-3.6-flash", "gemini-2.5-flash"]:
-                    try:
-                        res = client.models.generate_content(
-                            model=g_model,
-                            contents=prompt,
-                            config=types.GenerateContentConfig(
-                                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
-                            ),
-                        )
-                        if res and res.text:
-                            return res.text.strip()
-                    except Exception as ge:
-                        logger.debug(f"Gemini generate_content with {g_model} failed: {ge}")
-
-            # REST fallback for Gemini Generation API
-            for g_model in [target_gemini_model, "gemini-3.6-flash", "gemini-2.5-flash"]:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{g_model}:generateContent?key={gemini_key}"
-                payload = {"contents": [{"parts": [{"text": prompt}]}]}
-                resp = requests.post(url, json=payload, timeout=15)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts:
-                            return parts[0].get("text", "").strip()
-            logger.warning("Gemini generation REST response non-200")
-        except Exception as e:
-            logger.warning(f"Gemini generation API failed, checking OpenAI / fallback: {e}")
-
-    openai_key = getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY")
-    if openai_key and openai:
-        try:
-            client = openai.OpenAI(api_key=openai_key)
-            target_openai_model = model_name if (model_name and "gpt" in model_name) else "gpt-4o-mini"
-            res = client.chat.completions.create(
-                model=target_openai_model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful document retrieval assistant."},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,
-            )
-            return res.choices[0].message.content.strip()
-        except Exception as e:
-            logger.warning(f"OpenAI chat completion failed, falling back to local synthesizer: {e}")
-
-    sources_summary = "\n".join(f"- Document: {c.document.title} (Page {c.page_number or 1}): {c.content}" for c in top_chunks)
-    reply = f"Based on the relevant documents:\n\n{sources_summary}"
-    return reply
+        logger.error(f"Provider generate_response failed ({e}).")
+        return f"⚠️ **AI Agent Error**\n\nSomething went wrong while processing your request. The AI agent could not process the work right now. Please try again or select another AI model."

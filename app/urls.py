@@ -4,12 +4,14 @@ from django.urls import include, path
 from rest_framework import routers
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from app import settings
-from app.chat.views import ChatSessionViewSet
+from app.chat.views import ChatSessionViewSet, AIModelViewSet, UserAIConfigViewSet
 from app.docs.views import DocumentViewSet
 
 router = routers.DefaultRouter()
 router.register(r"documents", DocumentViewSet, basename="document")
 router.register(r"chat", ChatSessionViewSet, basename="chat")
+router.register(r"models", AIModelViewSet, basename="aimodel")
+router.register(r"ai-config", UserAIConfigViewSet, basename="aiconfig")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

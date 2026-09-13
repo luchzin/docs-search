@@ -1,52 +1,56 @@
 export default {
   common: {
-    appName: "Doc Search",
+    appName: "DocsSearch AI",
     settings: "ការកំណត់",
     cancel: "បោះបង់",
     save: "រក្សាទុក",
-    close: "បិទ",
-    back: "ត្រឡប់ក្រោយ",
+    delete: "លុប",
     loading: "កំពុងផ្ទុក...",
-    error: "កំហុស"
+    error: "កំហុស",
+    success: "ជោគជ័យ"
   },
   header: {
-    title: "ការជជែកពិភាក្សាឯកសារ RAG",
-    settingsTitle: "ការកំណត់ & ការកែសម្រួល",
-    signInRegister: "ចូល / ចុះឈ្មោះ",
-    logout: "ចាកចេញ",
+    title: "ជំនួយការ AI ឯកសារ",
+    settingsTitle: "ការកំណត់ & ចំណូលចិត្ត",
+    toggleSidebar: "បិទ/បើករបារចំហៀង",
     downloadApp: "ទាញយកកម្មវិធី",
-    toggleSidebar: "បិទ/បើក របារចំហៀង",
-    toggleDarkMode: "បិទ/បើក របៀបងងឹត",
-    githubRepo: "ឃ្លាំងទិន្នន័យ GitHub"
+    toggleDarkMode: "ប្តូររបៀបងងឹត",
+    signInRegister: "ចូលប្រើ / ចុះឈ្មោះ"
   },
   sidebar: {
-    title: "Doc Chat",
+    title: "DocsSearch AI",
     chats: "ការជជែក",
     docs: "ឯកសារ",
     newChat: "ការជជែកថ្មី",
-    noChats: "មិនទាន់មានការជជែកនៅឡើយទេ។ ចាប់ផ្តើមការជជែកថ្មីនៅខាងលើ!",
-    renameChat: "ប្តូរឈ្មោះការជជែក",
-    deleteChat: "លុបការជជែក",
     today: "ថ្ងៃនេះ",
     yesterday: "ម្សិលមិញ",
     previous7Days: "៧ ថ្ងៃមុន",
-    older: "ចាស់ៗ"
+    older: "ចាស់ជាងនេះ",
+    noChats: "មិនទាន់មានប្រវត្តិជជែកនៅឡើយទេ",
+    deleteChat: "លុបការជជែក",
+    renameChat: "ប្តូរឈ្មោះការជជែក"
   },
   chat: {
-    welcomeTitle: "សួរពាក្យសួរអំពីឯកសាររបស់អ្នក",
-    welcomeSub: "ផ្ទុកឡើងឯកសារ PDF នៅរបារចំហៀង បន្ទាប់មកសួរអ្វីដែលទាក់ទងនឹងខ្លឹមសាររបស់វា។",
-    startUploadNotice: "ចាប់ផ្តើមដោយការផ្ទុកឡើង PDF នៅរបារចំហៀង",
-    inputPlaceholder: "សួរពាក្យសួរអំពីឯកសាររបស់អ្នក...",
-    answersNotice: "ចម្លើយត្រូវបានបង្កើតចេញពីឯកសារ PDF ដែលអ្នកបានផ្ទុកឡើង",
+    inputPlaceholder: "សួរពាក្យសុំ ឬសំណួរអំពីឯកសាររបស់អ្នក...",
     sendMessage: "ផ្ញើសារ",
-    assistantRole: "អ្នកជំនួយការ",
+    send: "ផ្ញើ",
+    thinking: "កំពុងគិត...",
+    clearMessages: "សម្អាតសារជជែក",
+    uploadPrompt: "បង្ហោះឯកសារ PDF ដើម្បីចាប់ផ្តើមសួរសំណួរ",
+    noDocumentsFound: "មិនមានទិន្នន័យឯកសារ។ សូមបង្ហោះឯកសារ PDF ជាមុនសិន។",
+    sourcesUsed: "ប្រភពដែលបានប្រើ",
     userRole: "អ្នក",
-    jumpToLatest: "រំលងទៅសារចុងក្រោយ"
+    assistantRole: "DocsSearch AI",
+    welcomeTitle: "សូមស្វាគមន៍មកកាន់ DocsSearch AI",
+    welcomeSub: "បង្ហោះឯកសារ PDF និងសួរសំណួរដើម្បីទទួលបានចម្លើយ AI យ៉ាងច្បាស់លាស់ជាមួយប្រភពយោង។",
+    startUploadNotice: "សូមបង្ហោះឯកសារ PDF យ៉ាងហោចណាស់មួយក្នុងរបារចំហៀងដើម្បីចាប់ផ្តើមសួរសំណួរ។",
+    jumpToLatest: "លោតទៅសារចុងក្រោយ",
+    answersNotice: "AI អាចបង្កើតកំហុសបាន។ សូមផ្ទៀងផ្ទាត់ព័ត៌មាន និងប្រភពយោងសំខាន់ៗ។"
   },
-  docs: {
-    dropzoneTitle: "ទម្លាក់ឯកសារ PDF នៅទីនេះ",
-    dropzoneSub: "ឬចុចដើម្បីជ្រើសរើស",
-    pdfOnly: "តែឯកសារ PDF ប៉ុណ្ណោះ",
+  documents: {
+    dropzoneTitle: "ទម្លាក់ឯកសារ PDF ទីនេះ ឬចុចដើម្បីបង្ហោះ",
+    dropzoneSub: "គាំទ្រឯកសារ PDF រហូតដល់ 20MB",
+    uploading: "កំពុងបង្ហោះ និងដំណើរការទិន្នន័យ...",
     ready: "រួចរាល់",
     remove: "លុបចេញ"
   },
@@ -66,6 +70,8 @@ export default {
     selectModel: "ជ្រើសរើសម៉ូឌែល AI",
     active: "សកម្ម",
     modelSub: "ជ្រើសរើសម៉ូឌែលសកម្មមួយដើម្បីដោះស្រាយការជជែក និងការស្វែងរកឯកសារ។ Google Gemini ត្រូវបានកំណត់ជាលំនាំដើម។",
+    defaultGeminiNotice: "Google Gemini គឺជា AI លំនាំដើម (មិនចាំបាច់បំពេញទម្រង់កូនសោ API ទេ)",
+    defaultGeminiSub: "Google Gemini ត្រូវបានកំណត់ជាម៉ូឌែល AI លំនាំដើមនៅក្នុងកម្មវិធីនេះ។ ការតភ្ជាប់ API របស់ម៉ាស៊ីនបម្រើត្រូវបានកំណត់ស្វ័យប្រវត្តិ ដូច្នេះអ្នកប្រើប្រាស់មិនចាំបាច់បញ្ចូលកូនសោ API ឡើយ។",
     apiKeyFor: "កូនសោ API សម្រាប់ {provider}",
     apiKeySub: "កំណត់កូនសោ API សម្រាប់ម៉ូឌែលដែលបានជ្រើសរើស ({model})។",
     apiKeySavedLocally: "រក្សាទុកក្នុងកម្មវិធីរុករកក្នុងស្រុក",
@@ -94,10 +100,12 @@ export default {
     description: "សូមចូល ឬបង្កើតគណនីដើម្បីចូលប្រើការជជែក ឯកសារ និងការកំណត់។",
     login: "ចូល",
     register: "ចុះឈ្មោះ",
-    email: "អ៊ីមែល",
+    email: "អាសយដ្ឋានអ៊ីមែល",
     password: "ពាក្យសម្ងាត់",
-    fullName: "ឈ្មោះពេញ",
-    signIn: "ចូល",
-    createAccount: "បង្កើតគណនី"
+    name: "ឈ្មោះពេញ",
+    submitLogin: "ចូលប្រើ",
+    submitRegister: "បង្កើតគណនី",
+    dontHaveAccount: "មិនទាន់មានគណនីមែនទេ? ចុះឈ្មោះ",
+    alreadyHaveAccount: "មានគណនីរួចហើយមែនទេ? ចូលប្រើ"
   }
-}
+};

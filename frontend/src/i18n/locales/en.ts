@@ -1,52 +1,56 @@
 export default {
   common: {
-    appName: "Doc Search",
+    appName: "DocsSearch AI",
     settings: "Settings",
     cancel: "Cancel",
     save: "Save",
-    close: "Close",
-    back: "Back",
+    delete: "Delete",
     loading: "Loading...",
-    error: "Error"
+    error: "Error",
+    success: "Success"
   },
   header: {
-    title: "RAG Document Chat",
-    settingsTitle: "Settings & Configuration",
-    signInRegister: "Sign In / Register",
-    logout: "Logout",
-    downloadApp: "Download Application",
-    toggleSidebar: "Toggle sidebar",
-    toggleDarkMode: "Toggle dark mode",
-    githubRepo: "GitHub Repository"
+    title: "Document AI Assistant",
+    settingsTitle: "Settings & Preferences",
+    toggleSidebar: "Toggle Sidebar",
+    downloadApp: "Download App",
+    toggleDarkMode: "Toggle Dark Mode",
+    signInRegister: "Sign In / Register"
   },
   sidebar: {
-    title: "Doc Chat",
+    title: "DocsSearch AI",
     chats: "Chats",
-    docs: "Docs",
-    newChat: "New chat",
-    noChats: "No chats yet. Start a new chat above!",
-    renameChat: "Rename chat",
-    deleteChat: "Delete chat",
+    docs: "Documents",
+    newChat: "New Chat",
     today: "Today",
     yesterday: "Yesterday",
     previous7Days: "Previous 7 Days",
-    older: "Older"
+    older: "Older",
+    noChats: "No chat history yet",
+    deleteChat: "Delete Chat",
+    renameChat: "Rename Chat"
   },
   chat: {
-    welcomeTitle: "Ask questions about your documents",
-    welcomeSub: "Upload PDF support documents in the sidebar, then ask anything related to their content.",
-    startUploadNotice: "Start by uploading a PDF in the sidebar",
     inputPlaceholder: "Ask a question about your documents...",
-    answersNotice: "Answers are generated from your uploaded PDF documents",
     sendMessage: "Send message",
-    assistantRole: "Assistant",
+    send: "Send",
+    thinking: "Thinking...",
+    clearMessages: "Clear Chat Messages",
+    uploadPrompt: "Upload a PDF document to begin asking questions",
+    noDocumentsFound: "No document chunks available. Upload a PDF document first.",
+    sourcesUsed: "Sources Used",
     userRole: "You",
-    jumpToLatest: "Jump to latest message"
+    assistantRole: "DocsSearch AI",
+    welcomeTitle: "Welcome to DocsSearch AI",
+    welcomeSub: "Upload PDF documents and ask questions to retrieve precise, AI-generated answers with source citations.",
+    startUploadNotice: "Please upload at least one PDF document in the sidebar to start asking questions.",
+    jumpToLatest: "Jump to latest messages",
+    answersNotice: "AI can make mistakes. Verify important document citations and information."
   },
-  docs: {
-    dropzoneTitle: "Drop PDF here",
-    dropzoneSub: "or click to browse",
-    pdfOnly: "PDF only",
+  documents: {
+    dropzoneTitle: "Drop PDF documents here or click to upload",
+    dropzoneSub: "Supports PDF files up to 20MB",
+    uploading: "Uploading and processing embeddings...",
     ready: "Ready",
     remove: "Remove"
   },
@@ -66,6 +70,8 @@ export default {
     selectModel: "Select AI Model",
     active: "Active",
     modelSub: "Select one active model to handle chat & document search queries. Google Gemini is set as default.",
+    defaultGeminiNotice: "Google Gemini is Default AI (No API Key Form Required)",
+    defaultGeminiSub: "Google Gemini is set as the default built-in AI model for this application. Server API integration is active automatically so no user API key entry is required.",
     apiKeyFor: "API Key for {provider}",
     apiKeySub: "Set the API key for your currently selected model ({model}).",
     apiKeySavedLocally: "Saved locally in browser",
@@ -94,10 +100,12 @@ export default {
     description: "Please sign in or create an account to access chats, documents, and model settings.",
     login: "Login",
     register: "Register",
-    email: "Email",
+    email: "Email Address",
     password: "Password",
-    fullName: "Full Name",
-    signIn: "Sign In",
-    createAccount: "Create Account"
+    name: "Full Name",
+    submitLogin: "Sign In",
+    submitRegister: "Create Account",
+    dontHaveAccount: "Don't have an account? Register",
+    alreadyHaveAccount: "Already have an account? Sign In"
   }
-}
+};

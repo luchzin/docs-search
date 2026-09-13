@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import { api } from "@/lib/utils";
 
 export type ModelProvider = "gemini" | "openai" | "claude" | "deepseek";
 
@@ -10,16 +11,18 @@ export interface ModelOption {
   providerName: string;
   description: string;
   isDefault?: boolean;
+  requiresApiKey?: boolean;
 }
 
 export const AVAILABLE_MODELS: ModelOption[] = [
   {
-    id: "gemini-2.0-flash",
-    name: "Gemini 2.0 Flash",
+    id: "gemini-3.6-flash",
+    name: "Gemini 3.6 Flash",
     provider: "gemini",
     providerName: "Google Gemini",
-    description: "Fast, highly performant model by Google (Default)",
+    description: "Fast, highly performant model by Google (Default, Built-in AI)",
     isDefault: true,
+    requiresApiKey: false,
   },
   {
     id: "gemini-1.5-pro",
@@ -27,6 +30,8 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     provider: "gemini",
     providerName: "Google Gemini",
     description: "Advanced reasoning with high quality responses",
+    isDefault: false,
+    requiresApiKey: false,
   },
   {
     id: "gpt-4o",
@@ -34,6 +39,7 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     provider: "openai",
     providerName: "OpenAI ChatGPT",
     description: "Flagship intelligence model for multimodal tasks",
+    requiresApiKey: true,
   },
   {
     id: "gpt-4o-mini",
@@ -41,6 +47,7 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     provider: "openai",
     providerName: "OpenAI ChatGPT",
     description: "Lightweight and efficient OpenAI model",
+    requiresApiKey: true,
   },
   {
     id: "claude-3-5-sonnet",
@@ -48,6 +55,7 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     provider: "claude",
     providerName: "Anthropic Claude",
     description: "State-of-the-art reasoning and coding performance",
+    requiresApiKey: true,
   },
   {
     id: "deepseek-chat",
@@ -55,6 +63,7 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     provider: "deepseek",
     providerName: "DeepSeek AI",
     description: "High efficiency open-weights baseline model",
+    requiresApiKey: true,
   },
 ];
 
@@ -66,7 +75,8 @@ interface ModelStorageData {
 }
 
 export const useModelStore = defineStore("model", () => {
-  const selectedModelId = ref<string>("gemini-2.0-flash");
+  const selectedModelId = ref<string>("gemini-3.6-flash");
+  const modelsList = ref<ModelOption[]>(AVAILABLE_MODELS);
   const apiKeys = ref<Record<ModelProvider, string>>({
     gemini: "",
     openai: "",
@@ -79,9 +89,18 @@ export const useModelStore = defineStore("model", () => {
 
   const selectedModel = computed<ModelOption>(() => {
     return (
-      AVAILABLE_MODELS.find((m) => m.id === selectedModelId.value) ||
-      AVAILABLE_MODELS[0]
+      modelsList.value.find((m) => m.id === selectedModelId.value) ||
+      modelsList.value[0]
     );
+  });
+
+  // Gemini (default AI) does not require user API form
+  const isDefaultGemini = computed<boolean>(() => {
+    return selectedModel.value.provider === "gemini";
+  });
+
+  const requiresApiKey = computed<boolean>(() => {
+    return !isDefaultGemini.value && (selectedModel.value.requiresApiKey ?? true);
   });
 
   const currentApiKey = computed<string>(() => {
@@ -90,15 +109,47 @@ export const useModelStore = defineStore("model", () => {
   });
 
   function setModel(modelId: string) {
-    if (AVAILABLE_MODELS.some((m) => m.id === modelId)) {
+    if (modelsList.value.some((m) => m.id === modelId)) {
       selectedModelId.value = modelId;
       saveToStorage();
+      syncWithBackend();
     }
   }
 
   function setApiKey(provider: ModelProvider, key: string) {
     apiKeys.value[provider] = key.trim();
     saveToStorage();
+    syncWithBackend();
+  }
+
+  async function syncWithBackend() {
+    try {
+      await api.post("/ai-config/", {
+        selected_model_id: selectedModelId.value,
+        api_keys: apiKeys.value,
+      });
+    } catch (e) {
+      // Ignore if offline
+    }
+  }
+
+  async function fetchModelsFromBackend() {
+    try {
+      const res = await api.get<any[]>("/models/");
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        modelsList.value = res.data.map((m: any) => ({
+          id: m.id || m.model_id,
+          name: m.name,
+          provider: m.provider as ModelProvider,
+          providerName: m.provider_name,
+          description: m.description,
+          isDefault: Boolean(m.is_default),
+          requiresApiKey: Boolean(m.requires_api_key),
+        }));
+      }
+    } catch (e) {
+      // Use fallback AVAILABLE_MODELS
+    }
   }
 
   function saveToStorage() {
@@ -139,10 +190,14 @@ export const useModelStore = defineStore("model", () => {
   return {
     selectedModelId,
     selectedModel,
+    isDefaultGemini,
+    requiresApiKey,
     apiKeys,
     currentApiKey,
+    modelsList,
     AVAILABLE_MODELS,
     setModel,
     setApiKey,
+    fetchModelsFromBackend,
   };
 });

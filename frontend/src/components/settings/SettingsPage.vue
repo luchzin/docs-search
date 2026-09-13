@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   Sparkles,
@@ -42,7 +42,6 @@ import {
 import { useDark } from "@vueuse/core";
 import {
   useModelStore,
-  AVAILABLE_MODELS,
   type ModelOption,
   type ModelProvider,
 } from "@/stores/model";
@@ -66,6 +65,10 @@ const activeTab = ref<SettingsTab>("model");
 
 const localApiKey = ref(modelStore.currentApiKey);
 const showApiKey = ref(false);
+
+onMounted(() => {
+  modelStore.fetchModelsFromBackend();
+});
 
 // Keep API key input updated when selected model changes
 watch(
@@ -311,7 +314,7 @@ function changeLanguage(lang: SupportedLocale) {
             </Card>
           </div>
 
-          <!-- TAB 1: AI Model & Single Active API Key -->
+          <!-- TAB 1: AI Model Selection & API Key Configuration -->
           <div v-else-if="activeTab === 'model'" class="space-y-6">
             <!-- Model Selection Cards Grid -->
             <Card class="border shadow-2xs">
@@ -332,7 +335,7 @@ function changeLanguage(lang: SupportedLocale) {
               <CardContent class="pt-4 space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div
-                    v-for="model in AVAILABLE_MODELS"
+                    v-for="model in modelStore.modelsList"
                     :key="model.id"
                     :class="[
                       'group relative flex items-start justify-between rounded-xl border p-3.5 cursor-pointer transition-all select-none',
@@ -384,89 +387,114 @@ function changeLanguage(lang: SupportedLocale) {
               </CardContent>
             </Card>
 
-            <!-- Single Focused API Key Card for Selected Model -->
-            <Card class="border shadow-2xs">
-              <CardHeader class="pb-3 border-b">
-                <div class="flex items-center gap-2">
-                  <Key class="h-5 w-5 text-primary" />
-                  <CardTitle class="text-lg">
-                    {{ $t('settings.apiKeyFor', { provider: modelStore.selectedModel.providerName }) }}
-                  </CardTitle>
-                </div>
-                <CardDescription class="text-xs mt-1">
-                  {{ $t('settings.apiKeySub', { model: modelStore.selectedModel.name }) }}
-                </CardDescription>
-              </CardHeader>
-              <CardContent class="pt-4">
-                <div class="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-                  <div class="flex items-center justify-between">
-                    <Label for="active-api-key" class="text-xs font-semibold flex items-center gap-1.5">
-                      <component :is="getProviderIcon(modelStore.selectedModel.provider)" class="h-4 w-4 text-primary" />
-                      <span>{{ modelStore.selectedModel.providerName }} API Key</span>
-                    </Label>
-                    <span v-if="modelStore.currentApiKey" class="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                      <ShieldCheck class="h-3.5 w-3.5" /> {{ $t('settings.keySet') }}
-                    </span>
-                    <Badge v-else variant="outline" class="text-[10px] text-muted-foreground font-normal">
-                      {{ $t('settings.optionalRequired') }}
-                    </Badge>
+            <!-- Gemini Default Banner (No API key form required) -->
+            <div v-if="modelStore.isDefaultGemini" class="space-y-4">
+              <Card class="border border-primary/20 bg-primary/5 shadow-2xs">
+                <CardHeader class="pb-3">
+                  <div class="flex items-center gap-2.5">
+                    <Sparkles class="h-5 w-5 text-primary shrink-0" />
+                    <CardTitle class="text-base font-semibold text-foreground">
+                      {{ $t('settings.defaultGeminiNotice') }}
+                    </CardTitle>
                   </div>
+                  <CardDescription class="text-xs mt-1.5 leading-relaxed text-muted-foreground">
+                    {{ $t('settings.defaultGeminiSub') }}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent class="pt-0 pb-4">
+                  <div class="flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-2 rounded-lg border border-emerald-500/20">
+                    <ShieldCheck class="h-4 w-4 shrink-0" />
+                    <span>System integration active — no API key form needed for Google Gemini.</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                  <div class="relative">
-                    <Input
-                      id="active-api-key"
-                      v-model="localApiKey"
-                      :type="showApiKey ? 'text' : 'password'"
-                      :placeholder="$t('settings.enterKeyPlaceholder', { provider: modelStore.selectedModel.providerName })"
-                      class="pr-10 text-xs h-9.5"
-                      @blur="saveKey"
-                      @keyup.enter="saveKey"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
-                      @click="showApiKey = !showApiKey"
-                    >
-                      <EyeOff v-if="showApiKey" class="h-3.5 w-3.5" />
-                      <Eye v-else class="h-3.5 w-3.5" />
-                    </Button>
+            <!-- Focused API Key Card ONLY for non-default models that require user API key -->
+            <div v-else-if="modelStore.requiresApiKey" class="space-y-4">
+              <Card class="border shadow-2xs">
+                <CardHeader class="pb-3 border-b">
+                  <div class="flex items-center gap-2">
+                    <Key class="h-5 w-5 text-primary" />
+                    <CardTitle class="text-lg">
+                      {{ $t('settings.apiKeyFor', { provider: modelStore.selectedModel.providerName }) }}
+                    </CardTitle>
                   </div>
+                  <CardDescription class="text-xs mt-1">
+                    {{ $t('settings.apiKeySub', { model: modelStore.selectedModel.name }) }}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent class="pt-4">
+                  <div class="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <Label for="active-api-key" class="text-xs font-semibold flex items-center gap-1.5">
+                        <component :is="getProviderIcon(modelStore.selectedModel.provider)" class="h-4 w-4 text-primary" />
+                        <span>{{ modelStore.selectedModel.providerName }} API Key</span>
+                      </Label>
+                      <span v-if="modelStore.currentApiKey" class="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                        <ShieldCheck class="h-3.5 w-3.5" /> {{ $t('settings.keySet') }}
+                      </span>
+                      <Badge v-else variant="outline" class="text-[10px] text-muted-foreground font-normal">
+                        Required for {{ modelStore.selectedModel.name }}
+                      </Badge>
+                    </div>
 
-                  <div class="flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span class="flex items-center gap-1">
-                      <ShieldCheck class="h-3 w-3 text-emerald-500" />
-                      {{ $t('settings.apiKeySavedLocally') }}
-                    </span>
-                    <span v-if="modelStore.currentApiKey" class="text-emerald-600 font-medium">
-                      {{ $t('settings.activeKeySaved') }}
-                    </span>
-                  </div>
+                    <div class="relative">
+                      <Input
+                        id="active-api-key"
+                        v-model="localApiKey"
+                        :type="showApiKey ? 'text' : 'password'"
+                        :placeholder="$t('settings.enterKeyPlaceholder', { provider: modelStore.selectedModel.providerName })"
+                        class="pr-10 text-xs h-9.5"
+                        @blur="saveKey"
+                        @keyup.enter="saveKey"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                        @click="showApiKey = !showApiKey"
+                      >
+                        <EyeOff v-if="showApiKey" class="h-3.5 w-3.5" />
+                        <Eye v-else class="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
 
-                  <!-- Submit API Key Action Button -->
-                  <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t">
-                    <p v-if="uploadStatusMessage" class="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                      {{ uploadStatusMessage }}
-                    </p>
-                    <p v-else class="text-[11px] text-muted-foreground">
-                      {{ $t('settings.submitNotice', { provider: modelStore.selectedModel.providerName }) }}
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      class="gap-2 shrink-0 h-9 text-xs font-semibold px-4"
-                      :disabled="isUploadingKey"
-                      @click="handleUploadApiKey"
-                    >
-                      <Loader2 v-if="isUploadingKey" class="h-3.5 w-3.5 animate-spin" />
-                      <Save v-else class="h-3.5 w-3.5" />
-                      <span>{{ $t('settings.saveApiKeyBtn') }}</span>
-                    </Button>
+                    <div class="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span class="flex items-center gap-1">
+                        <ShieldCheck class="h-3 w-3 text-emerald-500" />
+                        {{ $t('settings.apiKeySavedLocally') }}
+                      </span>
+                      <span v-if="modelStore.currentApiKey" class="text-emerald-600 font-medium">
+                        {{ $t('settings.activeKeySaved') }}
+                      </span>
+                    </div>
+
+                    <!-- Submit API Key Action Button -->
+                    <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t">
+                      <p v-if="uploadStatusMessage" class="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        {{ uploadStatusMessage }}
+                      </p>
+                      <p v-else class="text-[11px] text-muted-foreground">
+                        {{ $t('settings.submitNotice', { provider: modelStore.selectedModel.providerName }) }}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        class="gap-2 shrink-0 h-9 text-xs font-semibold px-4"
+                        :disabled="isUploadingKey"
+                        @click="handleUploadApiKey"
+                      >
+                        <Loader2 v-if="isUploadingKey" class="h-3.5 w-3.5 animate-spin" />
+                        <Save v-else class="h-3.5 w-3.5" />
+                        <span>{{ $t('settings.saveApiKeyBtn') }}</span>
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           <!-- TAB 2: Appearance -->
