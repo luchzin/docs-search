@@ -1,0 +1,30 @@
+{
+  "name": "docs-search-cli",
+  "version": "1.0.0",
+  "description": "CLI tool to install and run the Docs Search RAG application",
+  "main": "src/index.js",
+  "bin": {
+    "docs-search": "./bin/cli.js",
+    "myapp": "./bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "start": "node bin/cli.js start",
+    "check": "node bin/cli.js check",
+    "test": "node bin/cli.js check"
+  },
+  "keywords": [
+    "rag",
+    "docs-search",
+    "python",
+    "django",
+    "vue",
+    "cli"
+  ],
+  "dependencies": {
+    "open": "^10.2.0"
+  }
+}
