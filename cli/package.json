@@ -1,11 +1,11 @@
 {
-  "name": "docs-search-cli",
+  "name": "@docs-search/docs-search-cli",
   "version": "1.0.0",
   "description": "CLI tool to install and run the Docs Search RAG application",
   "main": "src/index.js",
   "bin": {
-    "docs-search": "./bin/cli.js",
-    "myapp": "./bin/cli.js"
+    "docs-search": "bin/cli.js",
+    "myapp": "bin/cli.js"
   },
   "files": [
     "bin",
@@ -26,5 +26,16 @@
   ],
   "dependencies": {
     "open": "^10.2.0"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luchzin/docs-search.git"
+  },
+  "author": "daluch",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/luchzin/docs-search/issues"
+  },
+  "homepage": "https://github.com/luchzin/docs-search#readme"
 }
