@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from "vue"
-import { FileText, Sparkles, ArrowDown } from "@lucide/vue"
+import { FileText, Sparkles, ArrowDown, Loader2 } from "lucide-vue-next"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useChatStore } from "@/stores/chat"
@@ -13,12 +13,35 @@ const documentsStore = useDocumentsStore()
 const scrollContainerRef = ref<HTMLElement | null>(null)
 const scrollAnchor = ref<HTMLElement | null>(null)
 const showScrollToBottom = ref(false)
+const isFetchingOlder = ref(false)
 
-function handleScroll() {
+const lastMessageId = ref<string | null>(null)
+
+async function handleScroll() {
   if (!scrollContainerRef.value) return
   const el = scrollContainerRef.value
+
   const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
   showScrollToBottom.value = distanceFromBottom > 80
+
+  // Upward infinite scroll trigger when scrolling near top
+  if (
+    el.scrollTop < 50 &&
+    chatStore.activeChatId &&
+    chatStore.activeChat?.hasMoreMessages &&
+    !chatStore.activeChat?.isLoadingOlder &&
+    !isFetchingOlder.value
+  ) {
+    isFetchingOlder.value = true
+    const oldScrollHeight = el.scrollHeight
+    await chatStore.fetchMessagesForChat(chatStore.activeChatId, { reset: false })
+    await nextTick()
+    if (scrollContainerRef.value) {
+      const newScrollHeight = scrollContainerRef.value.scrollHeight
+      scrollContainerRef.value.scrollTop = newScrollHeight - oldScrollHeight
+    }
+    isFetchingOlder.value = false
+  }
 }
 
 async function scrollToBottom(smooth = true) {
@@ -28,20 +51,51 @@ async function scrollToBottom(smooth = true) {
 }
 
 watch(
-  () => [chatStore.messages.length, chatStore.isLoading],
-  async () => {
-    await nextTick()
-    if (!scrollContainerRef.value) {
-      scrollToBottom(true)
+  () => chatStore.activeChatId,
+  async (newId) => {
+    if (newId) {
+      await nextTick()
+      scrollToBottom(false)
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => chatStore.messages,
+  async (newMessages) => {
+    if (!newMessages.length) {
+      lastMessageId.value = null
       return
     }
-    const el = scrollContainerRef.value
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-    if (distanceFromBottom < 200 || !showScrollToBottom.value) {
-      scrollToBottom(true)
+    const newLast = newMessages[newMessages.length - 1]?.id
+
+    // Auto scroll down if a new message was appended to bottom
+    if (newLast && newLast !== lastMessageId.value) {
+      lastMessageId.value = newLast
+      await nextTick()
+      if (!scrollContainerRef.value) {
+        scrollToBottom(true)
+        return
+      }
+      const el = scrollContainerRef.value
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      if (distanceFromBottom < 250 || !showScrollToBottom.value) {
+        scrollToBottom(true)
+      }
     }
   },
   { deep: true }
+)
+
+watch(
+  () => chatStore.isLoading,
+  async (loading) => {
+    if (loading) {
+      await nextTick()
+      scrollToBottom(true)
+    }
+  }
 )
 </script>
 
@@ -52,6 +106,14 @@ watch(
       class="h-full w-full overflow-y-auto"
       @scroll="handleScroll"
     >
+      <!-- Top Loader when loading older messages -->
+      <div
+        v-if="chatStore.activeChat?.isLoadingOlder"
+        class="flex justify-center py-3"
+      >
+        <Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+
       <div
         v-if="!chatStore.messages.length"
         class="flex h-full min-h-105 flex-col items-center justify-center gap-4 px-6 text-center"

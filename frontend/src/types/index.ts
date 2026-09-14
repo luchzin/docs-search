@@ -14,6 +14,8 @@ export interface Chat {
   created_at: string;
   messages: ChatMessage[];
   documents: UploadedDocument[];
+  hasMoreMessages?: boolean;
+  isLoadingOlder?: boolean;
 }
 export interface User {
   id: string;

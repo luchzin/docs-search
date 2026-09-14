@@ -147,6 +147,57 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
         user = self.request.user if self.request.user.is_authenticated else None
         serializer.save(user=user)
 
+    @action(detail=True, methods=["get"], url_path="messages")
+    def list_messages(self, request, pk=None):
+        """Paginated endpoint to fetch messages for a session.
+        Query Params:
+          - limit: max messages to return (default 20, max 100)
+          - before_id: fetch messages created before the message with this ID
+        """
+        try:
+            session = self.get_object()
+        except Exception:
+            user = request.user if request.user.is_authenticated else None
+            session = ChatSession.objects.filter(id=pk, user=user).first()
+            if not session and not request.user.is_authenticated:
+                session = ChatSession.objects.filter(id=pk, user__isnull=True).first()
+            if not session:
+                return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            limit = int(request.query_params.get("limit", 20))
+            limit = max(1, min(limit, 100))
+        except (ValueError, TypeError):
+            limit = 20
+
+        before_id = request.query_params.get("before_id")
+
+        qs = Message.objects.filter(session=session)
+        if before_id:
+            try:
+                before_msg = Message.objects.filter(id=before_id, session=session).first()
+                if before_msg:
+                    qs = qs.filter(created_at__lt=before_msg.created_at)
+            except Exception:
+                pass
+
+        total_count = Message.objects.filter(session=session).count()
+        messages_list = list(qs.order_by("-created_at")[: limit + 1])
+
+        has_more = len(messages_list) > limit
+        if has_more:
+            messages_list = messages_list[:limit]
+
+        # Reverse back to chronological order (oldest first)
+        messages_list.reverse()
+
+        serializer = MessageSerializer(messages_list, many=True)
+        return Response({
+            "results": serializer.data,
+            "has_more": has_more,
+            "total_count": total_count,
+        })
+
     @action(detail=True, methods=["post"], url_path="send-message")
     def send_message(self, request, pk=None):
         """Custom endpoint to send a user message and trigger RAG pipeline."""

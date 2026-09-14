@@ -106,6 +106,10 @@ export const useChatStore = defineStore("chat", () => {
           activeChatId.value = chats.value[0]?.id || null;
         }
         saveToStorage();
+
+        if (activeChatId.value) {
+          await fetchMessagesForChat(activeChatId.value, { reset: true });
+        }
       }
     } catch (e) {
       console.warn("Django API unreachable or unauthorized; using local cache", e);
@@ -113,6 +117,77 @@ export const useChatStore = defineStore("chat", () => {
 
     if (chats.value.length === 0) {
       await createNewChat();
+    }
+  }
+
+  async function fetchMessagesForChat(
+    chatId: string,
+    options: { reset?: boolean; limit?: number } = {}
+  ) {
+    const chat = chats.value.find((c) => c.id === chatId);
+    if (!chat) return;
+
+    const authStore = useAuthStore();
+    if (!authStore.isAuthenticated) {
+      chat.hasMoreMessages = false;
+      return;
+    }
+
+    const limit = options.limit || 20;
+    if (options.reset) {
+      try {
+        const res = await api.get(`/chat/${chatId}/messages/`, {
+          params: { limit },
+        });
+        if (res.data?.results) {
+          chat.messages = res.data.results.map((m: any) => ({
+            id: String(m.id),
+            role: m.role,
+            content: m.content,
+            createdAt: m.created_at || m.createdAt,
+          }));
+          chat.hasMoreMessages = Boolean(res.data.has_more);
+          saveToStorage();
+        }
+      } catch (e) {
+        console.warn("Failed to fetch messages for chat", e);
+        chat.hasMoreMessages = false;
+      }
+    } else {
+      if (chat.isLoadingOlder || chat.hasMoreMessages === false) return;
+
+      const oldestMsg = chat.messages[0];
+      if (!oldestMsg) {
+        chat.hasMoreMessages = false;
+        return;
+      }
+
+      chat.isLoadingOlder = true;
+      try {
+        const res = await api.get(`/chat/${chatId}/messages/`, {
+          params: { limit, before_id: oldestMsg.id },
+        });
+        if (res.data?.results && Array.isArray(res.data.results)) {
+          const fetchedMsgs: ChatMessage[] = res.data.results.map((m: any) => ({
+            id: String(m.id),
+            role: m.role,
+            content: m.content,
+            createdAt: m.created_at || m.createdAt,
+          }));
+          const existingIds = new Set(chat.messages.map((m) => m.id));
+          const newMsgs = fetchedMsgs.filter((m) => !existingIds.has(m.id));
+          chat.messages.unshift(...newMsgs);
+          chat.hasMoreMessages = Boolean(res.data.has_more);
+          saveToStorage();
+        } else {
+          chat.hasMoreMessages = false;
+        }
+      } catch (e) {
+        console.warn("Failed to fetch older messages", e);
+        chat.hasMoreMessages = false;
+      } finally {
+        chat.isLoadingOlder = false;
+      }
     }
   }
 
@@ -125,6 +200,8 @@ export const useChatStore = defineStore("chat", () => {
       updated_at: new Date().toISOString(),
       messages: [],
       documents: [],
+      hasMoreMessages: false,
+      isLoadingOlder: false,
     };
     chats.value.unshift(newChat);
     activeChatId.value = newChat.id;
@@ -147,11 +224,16 @@ export const useChatStore = defineStore("chat", () => {
     return newChat.id;
   }
 
-  function selectChat(id: string) {
+  async function selectChat(id: string) {
     if (chats.value.some((c) => c.id === id)) {
       activeChatId.value = id;
       error.value = null;
       saveToStorage();
+
+      const chat = chats.value.find((c) => c.id === id);
+      if (chat && (chat.messages.length === 0 || chat.hasMoreMessages === undefined)) {
+        await fetchMessagesForChat(id, { reset: true });
+      }
     }
   }
 
@@ -301,6 +383,7 @@ export const useChatStore = defineStore("chat", () => {
     isLoading,
     error,
     fetchChats,
+    fetchMessagesForChat,
     createNewChat,
     selectChat,
     renameChat,

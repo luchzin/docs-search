@@ -72,3 +72,37 @@ class AIModelBackendTests(TestCase):
         mock_gen.side_effect = RuntimeError("Generic connection timeout")
         reply = generate_rag_response(self.session, "What is this?", model_name="gpt-4o")
         self.assertIn("AI Agent Error", reply)
+
+    def test_messages_pagination(self):
+        from app.chat.models import Message
+        import time
+        # Create 25 messages in session
+        created_msgs = []
+        for i in range(25):
+            msg = Message.objects.create(
+                session=self.session,
+                role="user" if i % 2 == 0 else "assistant",
+                content=f"Message {i+1}",
+            )
+            created_msgs.append(msg)
+
+        # Fetch first page (limit=10)
+        res = self.client.get(f"/api/v1/chat/{self.session.id}/messages/?limit=10")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        self.assertEqual(len(data["results"]), 10)
+        self.assertTrue(data["has_more"])
+        self.assertEqual(data["total_count"], 25)
+        # Results should be newest 10 messages (i=15..24), in chronological order
+        self.assertEqual(data["results"][-1]["content"], "Message 25")
+        self.assertEqual(data["results"][0]["content"], "Message 16")
+
+        # Fetch second page using before_id = ID of Message 16
+        first_msg_id = data["results"][0]["id"]
+        res_page2 = self.client.get(f"/api/v1/chat/{self.session.id}/messages/?limit=10&before_id={first_msg_id}")
+        self.assertEqual(res_page2.status_code, status.HTTP_200_OK)
+        data2 = res_page2.json()
+        self.assertEqual(len(data2["results"]), 10)
+        self.assertTrue(data2["has_more"])
+        self.assertEqual(data2["results"][-1]["content"], "Message 15")
+        self.assertEqual(data2["results"][0]["content"], "Message 6")

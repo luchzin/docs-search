@@ -38,10 +38,13 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class ChatSessionSerializer(serializers.ModelSerializer):
-    messages = MessageSerializer(many=True, read_only=True)
+    messages = serializers.SerializerMethodField()
     documents = DocumentSerializer(many=True, read_only=True)
 
     class Meta:
         model = ChatSession
         fields = ["id", "title", "created_at", "updated_at", "messages", "documents"]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def get_messages(self, obj):
+        return []
