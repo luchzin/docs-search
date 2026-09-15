@@ -1,3 +1,13 @@
+const documents = {
+  dropzoneTitle: "Drop PDF documents here or click to upload",
+  dropzoneSub: "Supports PDF files up to 20MB",
+  pdfOnly: "PDF Documents Only",
+  onlyPdfSupported: "Only PDF files are supported",
+  uploading: "Uploading and processing embeddings...",
+  ready: "Ready",
+  remove: "Remove"
+};
+
 export default {
   common: {
     appName: "DocsSearch AI",
@@ -47,13 +57,8 @@ export default {
     jumpToLatest: "Jump to latest messages",
     answersNotice: "AI can make mistakes. Verify important document citations and information."
   },
-  documents: {
-    dropzoneTitle: "Drop PDF documents here or click to upload",
-    dropzoneSub: "Supports PDF files up to 20MB",
-    uploading: "Uploading and processing embeddings...",
-    ready: "Ready",
-    remove: "Remove"
-  },
+  documents,
+  docs: documents,
   settings: {
     title: "Application Settings",
     subtitle: "Configure your active AI model, API key credentials, appearance, language, and workspace data.",
@@ -64,16 +69,22 @@ export default {
     accountTab: "Account & Session",
     dataTab: "Data & Storage",
     userAccount: "User Account",
+    manageAccountSub: "Manage your active login session and account details.",
+    signInSyncNotice: "Sign in to sync your document chats and custom settings.",
     loggedInAs: "Logged in as",
     notLoggedIn: "You are currently not signed in.",
     logoutBtn: "Log Out",
     selectModel: "Select AI Model",
     active: "Active",
+    defaultTag: "Default",
     modelSub: "Select one active model to handle chat & document search queries. Google Gemini is set as default.",
     defaultGeminiNotice: "Google Gemini is Default AI (No API Key Form Required)",
     defaultGeminiSub: "Google Gemini is set as the default built-in AI model for this application. Server API integration is active automatically so no user API key entry is required.",
+    systemIntegrationNotice: "System integration active — no API key form needed for Google Gemini.",
     apiKeyFor: "API Key for {provider}",
     apiKeySub: "Set the API key for your currently selected model ({model}).",
+    apiKeyHeader: "{provider} API Key",
+    requiredForModel: "Required for {model}",
     apiKeySavedLocally: "Saved locally in browser",
     activeKeySaved: "Active Key Saved",
     keySet: "Key Set ✓",
@@ -103,6 +114,9 @@ export default {
     email: "Email Address",
     password: "Password",
     name: "Full Name",
+    fullName: "Full Name",
+    signIn: "Sign In",
+    createAccount: "Create Account",
     submitLogin: "Sign In",
     submitRegister: "Create Account",
     dontHaveAccount: "Don't have an account? Register",

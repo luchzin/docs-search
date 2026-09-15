@@ -1,3 +1,13 @@
+const documents = {
+  dropzoneTitle: "ទម្លាក់ឯកសារ PDF ទីនេះ ឬចុចដើម្បីបង្ហោះ",
+  dropzoneSub: "គាំទ្រឯកសារ PDF រហូតដល់ 20MB",
+  pdfOnly: "សម្រាប់ឯកសារ PDF ប៉ុណ្ណោះ",
+  onlyPdfSupported: "គាំទ្រតែឯកសារ PDF ប៉ុណ្ណោះ",
+  uploading: "កំពុងបង្ហោះ និងដំណើរការទិន្នន័យ...",
+  ready: "រួចរាល់",
+  remove: "លុបចេញ"
+};
+
 export default {
   common: {
     appName: "DocsSearch AI",
@@ -47,13 +57,8 @@ export default {
     jumpToLatest: "លោតទៅសារចុងក្រោយ",
     answersNotice: "AI អាចបង្កើតកំហុសបាន។ សូមផ្ទៀងផ្ទាត់ព័ត៌មាន និងប្រភពយោងសំខាន់ៗ។"
   },
-  documents: {
-    dropzoneTitle: "ទម្លាក់ឯកសារ PDF ទីនេះ ឬចុចដើម្បីបង្ហោះ",
-    dropzoneSub: "គាំទ្រឯកសារ PDF រហូតដល់ 20MB",
-    uploading: "កំពុងបង្ហោះ និងដំណើរការទិន្នន័យ...",
-    ready: "រួចរាល់",
-    remove: "លុបចេញ"
-  },
+  documents,
+  docs: documents,
   settings: {
     title: "ការកំណត់កម្មវិធី",
     subtitle: "កំណត់ម៉ូឌែល AI កូនសោ API រូបរាង ភាសា និងទិន្នន័យកន្លែងធ្វើការរបស់អ្នក។",
@@ -64,16 +69,22 @@ export default {
     accountTab: "គណនី & ការចូលប្រើ",
     dataTab: "ទិន្នន័យ & ការផ្ទុក",
     userAccount: "គណនីអ្នកប្រើប្រាស់",
+    manageAccountSub: "គ្រប់គ្រងវគ្គចូលប្រើ និងព័ត៌មានលម្អិតនៃគណនីរបស់អ្នក។",
+    signInSyncNotice: "ចូលប្រើដើម្បីធ្វើបច្ចុប្បន្នភាពការជជែកឯកសារ និងការកំណត់របស់អ្នក។",
     loggedInAs: "បានចូលប្រើប្រាស់ជា",
     notLoggedIn: "អ្នកមិនទាន់បានចូលប្រើប្រាស់នៅឡើយទេ។",
     logoutBtn: "ចាកចេញ",
     selectModel: "ជ្រើសរើសម៉ូឌែល AI",
     active: "សកម្ម",
+    defaultTag: "លំនាំដើម",
     modelSub: "ជ្រើសរើសម៉ូឌែលសកម្មមួយដើម្បីដោះស្រាយការជជែក និងការស្វែងរកឯកសារ។ Google Gemini ត្រូវបានកំណត់ជាលំនាំដើម។",
     defaultGeminiNotice: "Google Gemini គឺជា AI លំនាំដើម (មិនចាំបាច់បំពេញទម្រង់កូនសោ API ទេ)",
     defaultGeminiSub: "Google Gemini ត្រូវបានកំណត់ជាម៉ូឌែល AI លំនាំដើមនៅក្នុងកម្មវិធីនេះ។ ការតភ្ជាប់ API របស់ម៉ាស៊ីនបម្រើត្រូវបានកំណត់ស្វ័យប្រវត្តិ ដូច្នេះអ្នកប្រើប្រាស់មិនចាំបាច់បញ្ចូលកូនសោ API ឡើយ។",
+    systemIntegrationNotice: "ការតភ្ជាប់ប្រព័ន្ធសកម្ម — មិនចាំបាច់បញ្ចូលកូនសោ API សម្រាប់ Google Gemini ទេ។",
     apiKeyFor: "កូនសោ API សម្រាប់ {provider}",
     apiKeySub: "កំណត់កូនសោ API សម្រាប់ម៉ូឌែលដែលបានជ្រើសរើស ({model})។",
+    apiKeyHeader: "កូនសោ API {provider}",
+    requiredForModel: "ត្រូវការសម្រាប់ {model}",
     apiKeySavedLocally: "រក្សាទុកក្នុងកម្មវិធីរុករកក្នុងស្រុក",
     activeKeySaved: "បានរក្សាទុកកូនសោសកម្ម",
     keySet: "បានកំណត់កូនសោ ✓",
@@ -103,6 +114,9 @@ export default {
     email: "អាសយដ្ឋានអ៊ីមែល",
     password: "ពាក្យសម្ងាត់",
     name: "ឈ្មោះពេញ",
+    fullName: "ឈ្មោះពេញ",
+    signIn: "ចូលប្រើ",
+    createAccount: "បង្កើតគណនី",
     submitLogin: "ចូលប្រើ",
     submitRegister: "បង្កើតគណនី",
     dontHaveAccount: "មិនទាន់មានគណនីមែនទេ? ចុះឈ្មោះ",

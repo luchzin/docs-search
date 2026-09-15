@@ -256,7 +256,7 @@ function changeLanguage(lang: SupportedLocale) {
                   <CardTitle class="text-lg">{{ $t('settings.userAccount') }}</CardTitle>
                 </div>
                 <CardDescription class="text-xs">
-                  Manage your active login session and account details.
+                  {{ $t('settings.manageAccountSub') }}
                 </CardDescription>
               </CardHeader>
               <CardContent class="pt-4 space-y-4">
@@ -296,7 +296,7 @@ function changeLanguage(lang: SupportedLocale) {
                         {{ $t('settings.notLoggedIn') }}
                       </p>
                       <p class="text-xs text-muted-foreground">
-                        Sign in to sync your document chats and custom settings.
+                        {{ $t('settings.signInSyncNotice') }}
                       </p>
                     </div>
                     <Button
@@ -367,7 +367,7 @@ function changeLanguage(lang: SupportedLocale) {
                             variant="secondary"
                             class="text-[9px] py-0 px-1 font-bold uppercase tracking-wider"
                           >
-                            Default
+                            {{ $t('settings.defaultTag') }}
                           </Badge>
                         </div>
                         <p class="text-[11px] text-muted-foreground line-clamp-2 leading-tight">
@@ -404,7 +404,7 @@ function changeLanguage(lang: SupportedLocale) {
                 <CardContent class="pt-0 pb-4">
                   <div class="flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-2 rounded-lg border border-emerald-500/20">
                     <ShieldCheck class="h-4 w-4 shrink-0" />
-                    <span>System integration active — no API key form needed for Google Gemini.</span>
+                    <span>{{ $t('settings.systemIntegrationNotice') }}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -429,13 +429,13 @@ function changeLanguage(lang: SupportedLocale) {
                     <div class="flex items-center justify-between">
                       <Label for="active-api-key" class="text-xs font-semibold flex items-center gap-1.5">
                         <component :is="getProviderIcon(modelStore.selectedModel.provider)" class="h-4 w-4 text-primary" />
-                        <span>{{ modelStore.selectedModel.providerName }} API Key</span>
+                        <span>{{ $t('settings.apiKeyHeader', { provider: modelStore.selectedModel.providerName }) }}</span>
                       </Label>
                       <span v-if="modelStore.currentApiKey" class="text-xs text-emerald-600 font-medium flex items-center gap-1">
                         <ShieldCheck class="h-3.5 w-3.5" /> {{ $t('settings.keySet') }}
                       </span>
                       <Badge v-else variant="outline" class="text-[10px] text-muted-foreground font-normal">
-                        Required for {{ modelStore.selectedModel.name }}
+                        {{ $t('settings.requiredForModel', { model: modelStore.selectedModel.name }) }}
                       </Badge>
                     </div>
 
