@@ -97,7 +97,7 @@ export const useChatStore = defineStore("chat", () => {
           documents: (c.documents || []).map((d: any) => ({
             id: String(d.id),
             name: d.title || (d.file ? d.file.split("/").pop() : "Document"),
-            size: 0,
+            size: typeof d.size === "number" ? d.size : (d.file_size || 0),
             status: "ready",
           })),
         }));

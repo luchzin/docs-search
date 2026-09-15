@@ -11,8 +11,17 @@ class DocumentChunkSerializer(serializers.ModelSerializer):
 
 class DocumentSerializer(serializers.ModelSerializer):
   chunks = DocumentChunkSerializer(many=True, read_only=True)
+  size = serializers.SerializerMethodField()
 
   class Meta:
     model = Document
-    fields = ["id", "title", "file", "uploaded_at", "session", "chunks"]
+    fields = ["id", "title", "file", "size", "uploaded_at", "session", "chunks"]
     read_only_fields = ["id", "uploaded_at"]
+
+  def get_size(self, obj):
+    try:
+      if obj.file and hasattr(obj.file, "size"):
+        return obj.file.size
+    except Exception:
+      pass
+    return 0

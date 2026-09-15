@@ -70,6 +70,9 @@ export const useDocumentsStore = defineStore("documents", () => {
         if (res.data?.id) {
           target.id = String(res.data.id);
         }
+        if (typeof res.data?.size === "number" && res.data.size > 0) {
+          target.size = res.data.size;
+        }
         target.status = "ready";
       }
       chatStore.saveToStorage();
