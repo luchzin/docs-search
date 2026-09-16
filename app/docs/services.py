@@ -15,6 +15,11 @@ try:
 except ImportError:
     pypdf = None
 
+try:
+    import docx
+except ImportError:
+    docx = None
+
 
 def get_gemini_api_key() -> str | None:
     return (
@@ -69,29 +74,67 @@ def get_embedding(text: str, model_name: str | None = None, api_key: str | None 
             return _generate_deterministic_embedding(text, dim=1536)
 
 
-def extract_pages_from_pdf(file_path: str) -> list[tuple[int, str]]:
-    """Extracts text per page from a PDF file. Returns list of (page_number, text)."""
+def extract_pages_from_document(file_path: str) -> list[tuple[int, str]]:
+    """Extracts text per page/section from PDF, DOCX, TXT, MD, CSV, JSON, or LOG files."""
     pages = []
-    if pypdf and os.path.exists(file_path):
-        try:
-            reader = pypdf.PdfReader(file_path)
-            for idx, page in enumerate(reader.pages, start=1):
-                text = page.extract_text() or ""
-                if text.strip():
-                    pages.append((idx, text.strip()))
-        except Exception as e:
-            logger.error(f"Error reading PDF with pypdf: {e}")
+    if not os.path.exists(file_path):
+        return pages
 
-    if not pages and os.path.exists(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+
+    # 1. PDF Documents
+    if ext == ".pdf":
+        if pypdf:
+            try:
+                reader = pypdf.PdfReader(file_path)
+                for idx, page in enumerate(reader.pages, start=1):
+                    text = page.extract_text() or ""
+                    if text.strip():
+                        pages.append((idx, text.strip()))
+            except Exception as e:
+                logger.error(f"Error reading PDF with pypdf: {e}")
+
+    # 2. Word Documents (.docx)
+    elif ext == ".docx":
+        if docx:
+            try:
+                doc = docx.Document(file_path)
+                paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+                if paragraphs:
+                    current_page = []
+                    current_len = 0
+                    page_idx = 1
+                    for p in paragraphs:
+                        current_page.append(p)
+                        current_len += len(p)
+                        if current_len >= 1500:
+                            pages.append((page_idx, "\n".join(current_page)))
+                            page_idx += 1
+                            current_page = []
+                            current_len = 0
+                    if current_page:
+                        pages.append((page_idx, "\n".join(current_page)))
+            except Exception as e:
+                logger.error(f"Error reading DOCX with python-docx: {e}")
+
+    # 3. Text, Markdown, CSV, JSON, LOG, or Fallback
+    if not pages:
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 raw_text = f.read().strip()
                 if raw_text:
-                    pages.append((1, raw_text))
+                    page_size = 2000
+                    for page_idx, start_pos in enumerate(range(0, len(raw_text), page_size), start=1):
+                        pages.append((page_idx, raw_text[start_pos : start_pos + page_size]))
         except Exception as e:
             logger.error(f"Error reading file as text fallback: {e}")
 
     return pages
+
+
+def extract_pages_from_pdf(file_path: str) -> list[tuple[int, str]]:
+    """Alias for backwards compatibility."""
+    return extract_pages_from_document(file_path)
 
 
 def chunk_text(pages: list[tuple[int, str]], chunk_size: int = 600, overlap: int = 150) -> list[dict]:
@@ -129,7 +172,7 @@ def process_and_store_document(document: Document) -> list[DocumentChunk]:
         return []
 
     file_path = document.file.path
-    pages = extract_pages_from_pdf(file_path)
+    pages = extract_pages_from_document(file_path)
 
     if not pages:
         pages = [(1, f"Document: {document.title}")]
@@ -164,7 +207,7 @@ def generate_rag_response(session, user_query: str, model_name: str | None = Non
         chunk_qs = DocumentChunk.objects.all()
 
     if not chunk_qs.exists():
-        return "No document chunks available in the database. Please upload a PDF document first."
+        return "No document chunks available in the database. Please upload a document first."
 
     top_chunks = (
         chunk_qs.annotate(distance=CosineDistance("embedding", query_embedding))

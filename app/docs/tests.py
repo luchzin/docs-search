@@ -82,3 +82,15 @@ class DocumentRagTestCase(TestCase):
         assistant_content = response.data["assistant_message"]["content"]
         self.assertTrue(len(assistant_content) > 0)
         self.assertIn("Annual Report", assistant_content)
+
+    def test_multiformat_document_upload(self):
+        # Markdown file upload test
+        md_file = SimpleUploadedFile("guide.md", b"# System Guide\nThis is a markdown system guide with key specifications.")
+        response = self.client.post(
+            "/api/v1/documents/",
+            {"file": md_file, "title": "System Guide", "session": str(self.session.id)},
+            format="multipart"
+        )
+        self.assertEqual(response.status_code, 201)
+        doc = Document.objects.get(id=response.data["id"])
+        self.assertGreater(DocumentChunk.objects.filter(document=doc).count(), 0)

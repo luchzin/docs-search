@@ -15,6 +15,7 @@ pgvector
 google-genai
 google-generativeai
 pypdf
+python-docx
 pillow
 pydantic
 python-dotenv

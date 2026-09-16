@@ -68,13 +68,13 @@ function openFilePicker() {
         <p class="text-sm font-medium">{{ $t('documents.dropzoneTitle') }}</p>
         <p class="text-xs text-muted-foreground">{{ $t('documents.dropzoneSub') }}</p>
       </div>
-      <Badge variant="secondary" class="text-[11px] sm:text-xs">{{ $t('documents.pdfOnly') }}</Badge>
+      <Badge variant="secondary" class="text-[11px] sm:text-xs">{{ $t('documents.supportedFormats') }}</Badge>
     </div>
 
     <input
       ref="fileInput"
       type="file"
-      accept="application/pdf,.pdf"
+      accept=".pdf,.docx,.txt,.md,.markdown,.csv,.json,.log,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json"
       multiple
       class="hidden"
       @change="onFileSelect"

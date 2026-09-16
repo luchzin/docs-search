@@ -4,8 +4,6 @@ import type { UploadedDocument } from "@/types";
 import { useChatStore } from "@/stores/chat";
 import { api } from "@/lib/utils";
 
-const PDF_MIME = "application/pdf";
-
 export const useDocumentsStore = defineStore("documents", () => {
   const chatStore = useChatStore();
 
@@ -21,13 +19,35 @@ export const useDocumentsStore = defineStore("documents", () => {
     documents.value.filter((doc) => doc.status === "ready")
   );
 
+  const SUPPORTED_EXTENSIONS = [
+    ".pdf",
+    ".docx",
+    ".txt",
+    ".md",
+    ".markdown",
+    ".csv",
+    ".json",
+    ".log",
+  ];
+
+  function isSupportedFileType(file: File): boolean {
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    return (
+      file.type === "application/pdf" ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.type.startsWith("text/") ||
+      file.type === "application/json" ||
+      SUPPORTED_EXTENSIONS.includes(ext)
+    );
+  }
+
   function isPdf(file: File): boolean {
-    return file.type === PDF_MIME || file.name.toLowerCase().endsWith(".pdf");
+    return isSupportedFileType(file);
   }
 
   async function addDocument(file: File): Promise<string | null> {
-    if (!isPdf(file)) {
-      return "Only PDF files are supported";
+    if (!isSupportedFileType(file)) {
+      return "Only PDF, DOCX, TXT, MD, CSV, JSON, and LOG files are supported";
     }
 
     let activeChat = chatStore.activeChat;
