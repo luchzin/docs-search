@@ -99,14 +99,25 @@ def extract_pages_from_document(file_path: str) -> list[tuple[int, str]]:
         if docx:
             try:
                 doc = docx.Document(file_path)
-                paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
-                if paragraphs:
+                text_blocks = []
+                # Extract paragraph text
+                for p in doc.paragraphs:
+                    if p.text.strip():
+                        text_blocks.append(p.text.strip())
+                # Extract table cell text
+                for table in doc.tables:
+                    for row in table.rows:
+                        row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                        if row_text:
+                            text_blocks.append(row_text)
+
+                if text_blocks:
                     current_page = []
                     current_len = 0
                     page_idx = 1
-                    for p in paragraphs:
-                        current_page.append(p)
-                        current_len += len(p)
+                    for block in text_blocks:
+                        current_page.append(block)
+                        current_len += len(block)
                         if current_len >= 1500:
                             pages.append((page_idx, "\n".join(current_page)))
                             page_idx += 1
@@ -116,6 +127,23 @@ def extract_pages_from_document(file_path: str) -> list[tuple[int, str]]:
                         pages.append((page_idx, "\n".join(current_page)))
             except Exception as e:
                 logger.error(f"Error reading DOCX with python-docx: {e}")
+
+        # ZIP XML fallback for DOCX text extraction (handles text frames, headers, tables, etc.)
+        if not pages:
+            try:
+                import zipfile
+                import xml.etree.ElementTree as ET
+                with zipfile.ZipFile(file_path) as z:
+                    xml_content = z.read("word/document.xml")
+                    tree = ET.fromstring(xml_content)
+                    texts = [node.text for node in tree.iter() if node.tag.endswith("}t") and node.text]
+                    full_text = " ".join(texts).strip()
+                    if full_text:
+                        page_size = 2000
+                        for page_idx, start_pos in enumerate(range(0, len(full_text), page_size), start=1):
+                            pages.append((page_idx, full_text[start_pos : start_pos + page_size]))
+            except Exception as ze:
+                logger.error(f"ZIP XML fallback reading DOCX failed: {ze}")
 
     # 3. Text, Markdown, CSV, JSON, LOG, or Fallback
     if not pages:
@@ -202,26 +230,71 @@ def generate_rag_response(session, user_query: str, model_name: str | None = Non
     provider = LLMFactory.get_provider(model_name)
     query_embedding = get_embedding(user_query, model_name=model_name, api_key=api_key)
 
-    chunk_qs = DocumentChunk.objects.filter(document__session=session)
+    # 1. Fetch active session documents and titles
+    session_docs = Document.objects.filter(session=session) if session else Document.objects.none()
+    if not session_docs.exists():
+        session_docs = Document.objects.all()
+
+    doc_titles = [doc.title for doc in session_docs if doc.title]
+
+    chunk_qs = DocumentChunk.objects.filter(document__session=session) if session else DocumentChunk.objects.none()
     if not chunk_qs.exists():
         chunk_qs = DocumentChunk.objects.all()
 
     if not chunk_qs.exists():
         return "No document chunks available in the database. Please upload a document first."
 
-    top_chunks = (
-        chunk_qs.annotate(distance=CosineDistance("embedding", query_embedding))
-        .order_by("distance")[:5]
-    )
+    # 2. Check if user query targets or names a specific document in session
+    query_lower = user_query.lower()
+    target_doc = None
+    for doc in session_docs:
+        if doc.title and (doc.title.lower() in query_lower or os.path.splitext(doc.title)[0].lower() in query_lower):
+            target_doc = doc
+            break
+
+    # 3. Retrieve chunks with priority given to targeted document if named
+    top_chunks = []
+    if target_doc:
+        target_chunks = list(
+            DocumentChunk.objects.filter(document=target_doc)
+            .annotate(distance=CosineDistance("embedding", query_embedding))
+            .order_by("distance")[:5]
+        )
+        if not target_chunks:
+            target_chunks = list(DocumentChunk.objects.filter(document=target_doc)[:5])
+
+        other_chunks = list(
+            chunk_qs.exclude(document=target_doc)
+            .annotate(distance=CosineDistance("embedding", query_embedding))
+            .order_by("distance")[:3]
+        )
+        top_chunks = target_chunks + other_chunks
+    else:
+        top_chunks = list(
+            chunk_qs.annotate(distance=CosineDistance("embedding", query_embedding))
+            .order_by("distance")[:7]
+        )
+
+    # 4. Ensure every document uploaded in session has representation in top_chunks
+    included_doc_ids = set(c.document_id for c in top_chunks)
+    for doc in session_docs:
+        if doc.id not in included_doc_ids:
+            doc_preview = DocumentChunk.objects.filter(document=doc)[:1]
+            for pc in doc_preview:
+                top_chunks.append(pc)
 
     context_text = "\n\n".join(
         f"[Document: {c.document.title}, Page {c.page_number or 1}]\n{c.content}"
         for c in top_chunks
     )
+
+    doc_list_str = ", ".join(doc_titles) if doc_titles else "Uploaded Documents"
+
     prompt = (
         "You are an AI assistant helping with document search and retrieval.\n"
-        "Answer the user's question accurately using ONLY the provided document context below.\n"
-        "Include the document title in your response as the source reference.\n\n"
+        f"Available Documents in this Chat Session: {doc_list_str}\n\n"
+        "Answer the user's question accurately using the provided document context below.\n"
+        "Include the document title in your response as the source reference when answering.\n\n"
         f"Context:\n{context_text}\n\n"
         f"User Question: {user_query}\nAnswer:"
     )
