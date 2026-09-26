@@ -94,3 +94,29 @@ class DocumentRagTestCase(TestCase):
         self.assertEqual(response.status_code, 201)
         doc = Document.objects.get(id=response.data["id"])
         self.assertGreater(DocumentChunk.objects.filter(document=doc).count(), 0)
+
+    def test_auto_reindex_placeholder_chunks(self):
+        # Create a document file with real text
+        doc_file = SimpleUploadedFile("CMIC_Proposal.docx", b"CMIC Technical Proposal Draft: CMIC aims to upgrade regional power infrastructure with smart grid sensors and automated load management.")
+        doc = Document.objects.create(session=self.session, title="CMIC_Technical_Proposal_Draft.docx", file=doc_file)
+        
+        # Manually create a dummy placeholder chunk as if uploaded prior to fix
+        doc.chunks.all().delete()
+        DocumentChunk.objects.create(
+            document=doc,
+            chunk_index=0,
+            page_number=1,
+            content=f"Document: {doc.title}",
+            embedding=get_embedding(f"Document: {doc.title}")
+        )
+        
+        self.assertEqual(doc.chunks.count(), 1)
+        self.assertEqual(doc.chunks.first().content, f"Document: {doc.title}")
+
+        # Calling generate_rag_response should detect the placeholder chunk and auto-reindex from file
+        res = generate_rag_response(self.session, "What is in the CMIC proposal?")
+        self.assertIn("CMIC_Technical_Proposal_Draft.docx", res)
+        # Chunks should now contain the real text content
+        self.assertGreater(doc.chunks.count(), 0)
+        self.assertIn("smart grid sensors", doc.chunks.first().content)
+
