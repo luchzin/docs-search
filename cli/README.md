@@ -1,4 +1,4 @@
-# Docs Search CLI (`docs-search-cli`)
+# Docs Search CLI (`@docs-search/docs-search-cli`)
 
 Command-line tool to automatically check prerequisites, install, configure, and launch the **Docs Search RAG Application**.
 
@@ -14,20 +14,20 @@ Command-line tool to automatically check prerequisites, install, configure, and 
 ### Run directly with `npx` (No installation needed)
 
 ```bash
-npx docs-search-cli
+npx @docs-search/docs-search-cli
 ```
 
 ### Or install globally via `npm`
 
 ```bash
-npm install -g docs-search-cli
+npm install -g @docs-search/docs-search-cli
 docs-search
 ```
 
 ## Available Commands & Options
 
 ```bash
-npx docs-search-cli [command] [options]
+npx @docs-search/docs-search-cli [command] [options]
 ```
 
 ### Commands

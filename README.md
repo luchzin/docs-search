@@ -43,6 +43,7 @@ Upload PDF documents, automatically index them using vector embeddings (`pgvecto
 - **🔒 Authentication**: Full User Registration, Login, and JWT Token Management via Djoser.
 - **📚 Interactive API Specs**: Embedded Swagger UI auto-generated with `drf-spectacular`.
 - **🎨 Responsive UI**: Clean dashboard built with Vue 3 Composition API (`<script setup>`), Tailwind CSS v4, Lucide icons, and Reka UI primitives.
+- **⚡ One-Command CLI**: Quick download, prerequisite checks, setup, and launch via `npx @docs-search/docs-search-cli`.
 
 ---
 
@@ -63,6 +64,10 @@ Upload PDF documents, automatically index them using vector embeddings (`pgvecto
 - **Router**: Vue Router
 - **Styling**: Tailwind CSS v4, Reka UI, Lucide Vue Next
 
+### CLI
+- **Package**: [`@docs-search/docs-search-cli`](cli/)
+- **Runtime**: Node.js (v18+)
+
 ---
 
 ## 📂 Project Structure
@@ -80,6 +85,10 @@ docs-search/
 │   │   └── views.py            # DocumentViewSet & vector search action
 │   ├── settings.py             # Database, DRF, JWT, media uploads settings
 │   └── urls.py                 # API router and OpenAPI documentation endpoints
+├── cli/                        # Docs Search CLI tool package (@docs-search/docs-search-cli)
+│   ├── bin/                    # CLI executable entrypoint (cli.js)
+│   ├── src/                    # CLI modules (checker, backend, frontend, repo-manager)
+│   └── package.json            # CLI package configuration & dependencies
 ├── frontend/                   # Vue 3 Frontend Application
 │   ├── src/
 │   │   ├── components/         # Auth, Chat, Document dropzone, & UI components
@@ -153,7 +162,41 @@ Interactive API documentation is generated automatically:
 
 ## ⚙️ Installation & Setup
 
-### Prerequisites
+You can set up and run Docs Search either automatically using the **CLI** or via **Manual Setup**.
+
+---
+
+### ⚡ Option 1: Quick Start via CLI (Automated)
+
+Developers can download, configure, and launch Docs Search directly from the command line using the official CLI tool:
+
+```bash
+# Run directly with npx (downloads and runs without global installation)
+npx @docs-search/docs-search-cli
+```
+
+Or install it globally via npm:
+```bash
+npm install -g @docs-search/docs-search-cli
+docs-search
+```
+
+**What the CLI does:**
+- 🔍 Verifies system prerequisites (Python 3.8+, Node.js 18+, npm, Git, venv).
+- 📥 Clones and downloads the Docs Search repository to your machine (default: `~/.docs-search`).
+- 🐍 Configures Python virtual environment (`.venv`), installs backend dependencies (`requirements.txt`), and runs migrations.
+- 💻 Installs Vue frontend dependencies and builds/starts development servers.
+- 🚀 Automatically opens Docs Search in your default web browser.
+
+> 📁 **CLI Directory**: The [`cli/`](cli/) directory in this repository contains the source code for the `@docs-search/docs-search-cli` package. See [`cli/README.md`](cli/README.md) for custom port configurations, flags, and advanced CLI options.
+
+---
+
+### 🛠️ Option 2: Manual Setup
+
+If you prefer to clone and configure the repository manually, follow the steps below.
+
+#### Prerequisites
 - **Python**: 3.10 or higher
 - **Node.js**: v18+ & `npm`
 - **PostgreSQL**: Version 15+ with `pgvector` extension enabled
